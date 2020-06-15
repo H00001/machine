@@ -6,12 +6,12 @@
 #define MACHINE_MEMORY_HH
 
 #include<string>
-#include <fstream>
+#include<fstream>
 
 class memory {
 public:
     std::string *load(const std::string &file) {
-        auto *buff = new std::string[40];
+        auto *buff = new std::string[120];
         std::ifstream in(file);
         std::string line;
         int i = 0;

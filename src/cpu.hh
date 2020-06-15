@@ -23,7 +23,8 @@ private:
     std::map<std::string, unsigned long *> regHeap = {{"eax", &tss.eax},
                                                       {"ebx", &tss.ebx},
                                                       {"ecx", &tss.ecx},
-                                                      {"edx", &tss.edx}};
+                                                      {"edx", &tss.edx},
+                                                      {"esi", &tss.esi}};
 
     opFN pushFn = [&](const std::string &val) {
         unsigned long k = 0;
@@ -32,11 +33,14 @@ private:
         }
         pushStack(k);
     };
+
     opFN popFn = [&](const std::string &val) {
         if (val.length() == 0) {
             popStack();
         }
     };
+
+    // lambda
     opFN callFn = [&](const std::string &val) {
         pushStack((unsigned long) tss.rip);
         tss.rip = (*tss.flages)[val];
@@ -47,9 +51,8 @@ private:
     };
 
 
-    opFN echoFn = [&](const std::string &val) {
-        auto k = val;
-        auto o = strings::Analyze(k);
+    opFN echoFn = [&](std::string val) {
+        auto o = strings::Analyze(val);
         for (auto &i:*o) {
             if (i->type == str) {
                 std::cout << i->operStr << std::endl;
@@ -58,9 +61,9 @@ private:
             }
         }
     };
-    opFN movFn = [&](const std::string &val) {
-        auto k = val;
-        auto o = strings::Analyze(k);
+
+    opFN movFn = [&](std::string val) {
+        auto o = strings::Analyze(val);
         int l_mv_r;
         if (o->front()->type == num) {
             l_mv_r = o->front()->operval;
@@ -108,12 +111,12 @@ public:
     }
 
     void pushStack(unsigned long val) {
-        *tss.esp = val;
+        *(tss.ss + tss.esp) = val;
         tss.esp++;
     }
 
     unsigned long popStack() {
-        auto lang = *(tss.esp - 1);
+        auto lang = *(tss.ss + tss.esp - 1);
         tss.esp--;
         return lang;
     }
@@ -149,6 +152,7 @@ public:
         tss.esp = next->m.esp;
         tss.ebp = next->m.ebp;
         tss.cs = next->m.cs;
+        tss.ss = next->m.ss;
         tss.flages = next->m.flages;
         execute();
     }
