@@ -16,6 +16,6 @@ ret
 __start:
 push %123
 push %456
-fun1()
-fun22()
+call fun1
+call fun22
 END

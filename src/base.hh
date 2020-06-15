@@ -8,6 +8,7 @@
 #endif //MACHINE_BASE_HH
 
 #include <string>
+#include <map>
 
 using cpu_register = unsigned long;
 using intstru_len = int;
@@ -31,6 +32,8 @@ struct m_cpu {
     cpu_register rs0;
     cpu_register rs1;
     cpu_register rs2;
+
+    std::map<std::string, int> *flages;
 
     int rip;
     std::string pc;

@@ -25,6 +25,17 @@ public:
         t->m.rip = 0;
         t->m.ebp = new unsigned long[20];
         t->m.esp = t->m.ebp;
+        t->m.flages = new std::map<std::string, int>();
+
+        for (int i = 0; *(tsk + i) != "END"; ++i) {
+            if ((*(tsk + i)) == "__start:") {
+                t->m.rip = i;
+            }
+            if ((*(tsk + i)).ends_with(":")) {
+                (*(t->m.flages))[(*(tsk + i)).substr(0, (*(tsk + i)).length() - 1)] = i;
+            }
+
+        }
 
         tsks[now++] = t;
     }

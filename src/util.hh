@@ -15,7 +15,7 @@ public:
         auto *r = new std::string[2];
         int index = s.find(s1);
         r[0] = s.substr(0, index);
-        r[1] = s.substr(index + 1, s.length());
+        r[1] = (index < 0) ? "" : s.substr(index + 1, s.length());
         return r;
     }
 };

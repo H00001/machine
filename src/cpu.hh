@@ -20,7 +20,6 @@ private:
     m_cpu tss;
     memory *mm = nullptr;
     process *pc = nullptr;
-    std::map<std::string, int> flages;
     std::map<std::string, unsigned long *> regHeap = {{"eax", &tss.eax},
                                                       {"ebx", &tss.ebx},
                                                       {"ecx", &tss.ecx},
@@ -39,8 +38,21 @@ private:
             popStack();
         }
     };
+    opFN callFn = [&](const std::string &val) {
+        pushStack((unsigned long) tss.rip);
+        tss.rip = (*tss.flages)[val];
+    };
+
+    opFN ret = [&](const std::string &val) {
+        tss.rip = popStack();
+
+    };
+
+
     std::map<std::string, std::function<void(std::string)>> operMap = {{"push", pushFn},
-                                                                       {"pop",  popFn}
+                                                                       {"pop",  popFn},
+                                                                       {"call", callFn},
+                                                                       {"ret",  ret}
 
     };
 public:
@@ -60,7 +72,7 @@ public:
         cpu::tss = tss;
     }
 
-    memory *getMm() const {
+    [[nodiscard]] memory *getMm() const {
         return mm;
     }
 
@@ -68,7 +80,7 @@ public:
         cpu::mm = mm;
     }
 
-    process *getPc() const {
+    [[nodiscard]] process *getPc() const {
         return pc;
     }
 
@@ -101,34 +113,12 @@ public:
     }
 
     void execute() {
-        bool inmain = false;
         while (true) {
             tss.pc = (*(tss.rip + tss.cs));
-
-            if (tss.pc == "__start:") {
-                inmain = true;
+            if (tss.pc == "END") {
+                break;
             }
-            if (!inmain && tss.pc.ends_with(":")) {
-                flages[tss.pc.substr(0, tss.pc.length() - 1)] = tss.rip;
-            }
-
-            if (inmain) {
-                if (tss.pc.starts_with("fun") && tss.pc.ends_with("()")) {
-                    pushStack((unsigned long) tss.rip + 1);
-                    tss.rip = flages[tss.pc.substr(0, tss.pc.length() - 2)] + 1;
-                    continue;
-                }
-                if (tss.pc == "ret") {
-                    tss.rip = popStack();
-                    continue;
-                }
-                analyizer(tss.pc);
-
-                if (tss.pc == "END") {
-                    break;
-                }
-            }
-
+            analyizer(tss.pc);
             tss.rip++;
         }
     }
@@ -140,6 +130,7 @@ public:
         tss.esp = pc->getProcess()->m.esp;
         tss.ebp = pc->getProcess()->m.ebp;
         tss.cs = pc->getProcess()->m.cs;
+        tss.flages = pc->getProcess()->m.flages;
         execute();
     }
 
