@@ -30,7 +30,6 @@ private:
         if (val.starts_with("%")) {
             k = stoi(val.substr(1, val.length()));
         }
-        std::cout << "push:" << k << std::endl;
         pushStack(k);
     };
     opFN popFn = [&](const std::string &val) {
@@ -45,14 +44,38 @@ private:
 
     opFN ret = [&](const std::string &val) {
         tss.rip = popStack();
-
     };
 
+
+    opFN echoFn = [&](const std::string &val) {
+        auto k = val;
+        auto o = strings::Analyze(k);
+        for (auto &i:*o) {
+            if (i->type == str) {
+                std::cout << i->operStr << std::endl;
+            } else if (i->type == reg) {
+                std::cout << *regHeap[i->operReg] << std::endl;
+            }
+        }
+    };
+    opFN movFn = [&](const std::string &val) {
+        auto k = val;
+        auto o = strings::Analyze(k);
+        int l_mv_r;
+        if (o->front()->type == num) {
+            l_mv_r = o->front()->operval;
+        }
+        if (o->back()->type == reg) {
+            *regHeap[o->back()->operReg] = l_mv_r;
+        }
+    };
 
     std::map<std::string, std::function<void(std::string)>> operMap = {{"push", pushFn},
                                                                        {"pop",  popFn},
                                                                        {"call", callFn},
-                                                                       {"ret",  ret}
+                                                                       {"ret",  ret},
+                                                                       {"mov",  movFn},
+                                                                       {"echo", echoFn}
 
     };
 public:
@@ -95,8 +118,8 @@ public:
         return lang;
     }
 
-    void setPc(process *pc) {
-        cpu::pc = pc;
+    void setPc(process *p) {
+        cpu::pc = p;
     }
 
     void analyizer(std::string basicString) {
@@ -104,11 +127,6 @@ public:
         auto val = strings::spilt(basicString, " ")[1];
         if (operMap.count(oper) == 1) {
             operMap[oper](val);
-        }
-        if (basicString.starts_with("mov")) {
-
-        } else {
-            std::cout << tss.pc << std::endl;
         }
     }
 
@@ -126,11 +144,12 @@ public:
     void PushProcess(const std::string &s) {
         auto t = mm->load(s);
         pc->add(t);
-        tss.rip = pc->getProcess()->m.rip;
-        tss.esp = pc->getProcess()->m.esp;
-        tss.ebp = pc->getProcess()->m.ebp;
-        tss.cs = pc->getProcess()->m.cs;
-        tss.flages = pc->getProcess()->m.flages;
+        task_struct *next = pc->getProcess();
+        tss.rip = next->m.rip;
+        tss.esp = next->m.esp;
+        tss.ebp = next->m.ebp;
+        tss.cs = next->m.cs;
+        tss.flages = next->m.flages;
         execute();
     }
 

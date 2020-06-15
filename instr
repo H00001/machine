@@ -1,19 +1,22 @@
 fun1:
-4
-5
-6
+echo 4
+echo 5
+echo 6
 ret
 
 fun22:
 push %123
 push %456
-hello
+echo hello
 pop
 pop
-word
+echo word
 ret
 
 __start:
+mov %1,$eax
+mov %2,$ebx
+echo $eax
 push %123
 push %456
 call fun1
