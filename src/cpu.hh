@@ -12,19 +12,19 @@
 #include "process.hh"
 #include <map>
 #include "util.hh"
-
-using opFN = std::function<void(std::string)>;
+#include "binary.hh"
 
 class cpu {
 private:
     m_cpu tss;
     memory *mm = nullptr;
     process *pc = nullptr;
-    std::map<std::string, unsigned long *> regHeap = {{"eax", &tss.eax},
-                                                      {"ebx", &tss.ebx},
-                                                      {"ecx", &tss.ecx},
-                                                      {"edx", &tss.edx},
-                                                      {"esi", &tss.esi}};
+    rHeap regHeap = {{"eax", &tss.eax},
+                     {"ebx", &tss.ebx},
+                     {"ecx", &tss.ecx},
+                     {"edx", &tss.edx},
+                     {"esi", &tss.esi},
+                     {"edi", &tss.edi}};
 
     opFN pushFn = [&](const std::string &val) {
         unsigned long k = 0;
@@ -50,9 +50,41 @@ private:
         tss.rip = popStack();
     };
 
+    opFN je = [&](std::string val) {
+        auto o = strings::Analyze(val, &regHeap);
+        if (o->size() == 1) {
+            if (OperatorBitF0(tss.bit_flags)) {
+                jmp(val);
+            }
+        } else {
+            if (o->front()->operval == 0) {
+                jmp(o->back()->operStr);
+            }
+        }
+    };
+
+    opFN jne = [&](std::string val) {
+        auto o = strings::Analyze(val, &regHeap);
+        if (o->size() == 1) {
+            if (!OperatorBitF0(tss.bit_flags)) {
+                jmp(val);
+            }
+        } else {
+            if (o->front()->operval != 0) {
+                jmp(o->back()->operStr);
+            }
+        }
+    };
+
+    opFN jmp = [&](std::string val) {
+        auto o = strings::Analyze(val, &regHeap);
+        // this is a bug operval is it not ul
+        tss.cs = o->size() == 2 ? (std::string *) o->front()->operval : tss.cs;
+        tss.rip = o->back()->operval;
+    };
 
     opFN echoFn = [&](std::string val) {
-        auto o = strings::Analyze(val);
+        auto o = strings::Analyze(val, &regHeap);
         for (auto &i:*o) {
             if (i->type == str) {
                 std::cout << i->operStr << std::endl;
@@ -63,7 +95,7 @@ private:
     };
 
     opFN movFn = [&](std::string val) {
-        auto o = strings::Analyze(val);
+        auto o = strings::Analyze(val, &regHeap);
         int l_mv_r;
         if (o->front()->type == num) {
             l_mv_r = o->front()->operval;
@@ -73,13 +105,23 @@ private:
         }
     };
 
-    std::map<std::string, std::function<void(std::string)>> operMap = {{"push", pushFn},
-                                                                       {"pop",  popFn},
-                                                                       {"call", callFn},
-                                                                       {"ret",  ret},
-                                                                       {"mov",  movFn},
-                                                                       {"echo", echoFn}
+    opFN add = [&](std::string val) {
+        auto o = strings::Analyze(val, &regHeap);
+        int l = o->front()->operval;
+        int r = o->back()->operval;
+        tss.eax = r + l;
+    };
 
+    operatorMap operMap = {{"push", pushFn},
+                           {"pop",  popFn},
+                           {"call", callFn},
+                           {"ret",  ret},
+                           {"mov",  movFn},
+                           {"echo", echoFn},
+                           {"add",  add},
+                           {"jmp",  jmp},
+                           {"je",   je},
+                           {"jne",  jne}
     };
 public:
 

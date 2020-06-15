@@ -1,24 +1,27 @@
 fun1:
-echo 4
-echo 5
-echo 6
+echo this is tt language
 ret
 
 fun22:
 push %123
 push %456
-echo hello
+add %1,%2
+echo $eax
+je fun22
 pop
 pop
 echo word
 ret
 
 __start:
-mov %1,$eax
+mov %20,$eax
 mov %2,$ebx
 echo $eax
 push %123
 push %456
+echo hello
+add $eax,%-1
+jne $eax,%18
 call fun1
 call fun22
 END

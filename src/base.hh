@@ -33,7 +33,10 @@ struct m_cpu {
     cpu_register rs1;
     cpu_register rs2;
 
+    cpu_register bit_flags;
+
     std::map<std::string, int> *flages;
+
 
     unsigned long rip;
     std::string pc;
