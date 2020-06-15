@@ -1,3 +1,8 @@
+@data
+dtc:
+    int 1,2,3,4,5
+
+@code
 fun1:
 echo this is tt language
 ret
@@ -16,12 +21,13 @@ ret
 __start:
 mov %20,$eax
 mov %2,$ebx
-echo $eax
+loop:
 push %123
 push %456
+echo $eax
 echo hello
 add $eax,%-1
-jne $eax,%18
+jne $eax,loop
 call fun1
 call fun22
 END

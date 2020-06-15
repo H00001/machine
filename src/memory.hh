@@ -7,20 +7,54 @@
 
 #include<string>
 #include<fstream>
+#include "base.hh"
+#include <map>
+
+struct seg {
+    std::string *code;
+    int clen;
+    byte *data;
+    int dlen;
+};
+
 
 class memory {
+private:
 public:
-    std::string *load(const std::string &file) {
+    seg *load(const std::string &file) {
+        int pos = -1;
         auto *buff = new std::string[120];
+        byte *data = new byte[2000];
         std::ifstream in(file);
         std::string line;
-        int i = 0;
+        int ldata = 0;
+        int lcode = 0;
         while (getline(in, line)) {
-            buff[i] = line;
-            i++;
+            if (line == "@data") {
+                pos = 0;
+            } else if (line == "@code") {
+                pos = 1;
+            } else if (pos == 0) {
+                ldata++;
+            } else if (pos == 1) {
+                buff[lcode] = line;
+                lcode++;
+            }
         }
-        return buff;
+
+
+        seg *s = new seg{buff, lcode, data, ldata};
+
+        return s;
     }
+
+
+    template<typename tp>
+    static tp transfer(std::map<cpu_register, LDT *> *ldtl, cpu_register seg, cpu_register mov) {
+        return (tp) (*ldtl)[seg]->base + mov;
+    }
+
+
 };
 
 

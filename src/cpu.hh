@@ -79,8 +79,12 @@ private:
     opFN jmp = [&](std::string val) {
         auto o = strings::Analyze(val, &regHeap);
         // this is a bug operval is it not ul
-        tss.cs = o->size() == 2 ? (std::string *) o->front()->operval : tss.cs;
-        tss.rip = o->back()->operval;
+        tss.cs = o->size() == 2 ? o->front()->operval : tss.cs;
+        if (o->back()->type == str) {
+            tss.rip = (*tss.flages)[o->back()->operStr];
+        } else {
+            tss.rip = o->back()->operval;
+        }
     };
 
     opFN echoFn = [&](std::string val) {
@@ -144,21 +148,13 @@ public:
         return mm;
     }
 
-    void setMm(memory *mm) {
-        cpu::mm = mm;
-    }
-
-    [[nodiscard]] process *getPc() const {
-        return pc;
-    }
-
     void pushStack(unsigned long val) {
-        *(tss.ss + tss.esp) = val;
+        *(memory::transfer<cpu_register *>(tss.seg_divide, tss.ss, tss.esp)) = val;
         tss.esp++;
     }
 
     unsigned long popStack() {
-        auto lang = *(tss.ss + tss.esp - 1);
+        auto lang = *(memory::transfer<cpu_register *>(tss.seg_divide, tss.ss, tss.esp - 1));
         tss.esp--;
         return lang;
     }
@@ -177,7 +173,7 @@ public:
 
     void execute() {
         while (true) {
-            tss.pc = (*(tss.rip + tss.cs));
+            tss.pc = *(memory::transfer<std::string *>(tss.seg_divide, tss.cs, tss.rip - 1));
             if (tss.pc == "END") {
                 break;
             }
@@ -187,15 +183,9 @@ public:
     }
 
     void PushProcess(const std::string &s) {
-        auto t = mm->load(s);
-        pc->add(t);
+        pc->add(mm->load(s));
         task_struct *next = pc->getProcess();
-        tss.rip = next->m.rip;
-        tss.esp = next->m.esp;
-        tss.ebp = next->m.ebp;
-        tss.cs = next->m.cs;
-        tss.ss = next->m.ss;
-        tss.flages = next->m.flages;
+        memmove(&tss, next, sizeof(task_struct));
         execute();
     }
 

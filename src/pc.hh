@@ -21,11 +21,11 @@ public:
         c = new cpu(new memory(), new process);
     }
 
-    ~pc() {
+    virtual ~pc() {
         delete c;
     }
 
-    void boot(std::string filename) {
+    void boot(const std::string &filename) {
         c->PushProcess(filename);
     }
 };

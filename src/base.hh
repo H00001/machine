@@ -12,11 +12,21 @@
 
 using cpu_register = unsigned long;
 using intstru_len = int;
+using byte = unsigned char;
+
+
+struct LDT {
+    void *base;
+    byte type;
+    int len;
+};
+
 
 struct m_cpu {
-    std::string *cs;
-    cpu_register *ss;
+    cpu_register cs;
+    cpu_register ss;
     cpu_register ds;
+    cpu_register es;
 
     cpu_register esp;
     cpu_register ebp;
@@ -37,6 +47,7 @@ struct m_cpu {
 
     std::map<std::string, int> *flages;
 
+    std::map<cpu_register, LDT *> *seg_divide;
 
     unsigned long rip;
     std::string pc;
