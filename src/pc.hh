@@ -11,6 +11,8 @@
 #include "process.hh"
 #include "cpu.hh"
 
+using namespace gunplan::cplusplus::machine;
+
 class pc {
 private:
     memory *mm;

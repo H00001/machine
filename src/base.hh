@@ -10,45 +10,34 @@
 #include <string>
 #include <map>
 
-using cpu_register = unsigned long;
-using intstru_len = int;
-using byte = unsigned char;
+namespace gunplan::cplusplus::machine {
+    using cpu_register = unsigned long;
+    using intstru_len = int;
+    using byte = unsigned char;
 
 
-struct LDT {
-    void *base;
-    byte type;
-    int len;
-};
+    struct LDT {
+        void *base;
+        byte type;
+        int len;
+    };
 
+    struct cache_block {
+        int flag;
+        unsigned long data;
+        int type;
+    };
 
-struct m_cpu {
-    cpu_register cs;
-    cpu_register ss;
-    cpu_register ds;
-    cpu_register es;
-
-    cpu_register esp;
-    cpu_register ebp;
-
-    cpu_register eax;
-    cpu_register ebx;
-    cpu_register ecx;
-    cpu_register edx;
-
-    cpu_register esi;
-    cpu_register edi;
-
-    cpu_register rs0;
-    cpu_register rs1;
-    cpu_register rs2;
-
-    cpu_register bit_flags;
-
-    std::map<std::string, int> *flages;
-
-    std::map<cpu_register, LDT *> *seg_divide;
-
-    unsigned long rip;
-    std::string pc;
-};
+    struct m_cpu {
+        cpu_register cs, ss, ds, es, hs;
+        cpu_register esp, ebp;
+        cpu_register eax, ebx, ecx, edx;
+        cpu_register esi, edi;
+        cpu_register rs0, rs1, rs2;
+        cpu_register bit_flags;
+        std::map<std::string, int> *func_map;
+        std::map<cpu_register, LDT *> *seg_divide;
+        unsigned long rip;
+        std::string pc;
+    };
+}
