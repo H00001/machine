@@ -27,9 +27,20 @@ struct Operator {
 };
 
 class strings {
+private:
+    static std::string &ClearHeadTailSpace(std::string &str) {
+        if (str.empty()) {
+            return str;
+        }
+        str.erase(0, str.find_first_not_of(" "));
+        str.erase(str.find_last_not_of(" ") + 1);
+        return str;
+    }
 
 public:
+
     static std::string *spilt(std::string &s, std::string s1) {
+        s = ClearHeadTailSpace(s);
         auto *r = new std::string[2];
         int index = s.find(s1);
         r[0] = s.substr(0, index);
@@ -43,13 +54,22 @@ public:
         if (opIndex < 0) {
             list->push_back(operAna(s, h));
         } else {
-            auto op = spilt(s, ",");
-            auto l = op[0];
-            auto r = op[1];
-            list->push_back(operAna(l, h));
-            list->push_back(operAna(r, h));
+            sp(s, h, list);
         }
         return list;
+    }
+
+    static void sp(std::string &s, rHeap *h, std::list<Operator *> *list) {
+        auto op = spilt(s, ",");
+        list->push_back(operAna(op[0], h));
+        auto c = operAna(op[1], h);
+        int k = c->operStr.find(',');
+        if (k > 0) {
+            sp(c->operStr, h, list);
+        } else {
+            list->push_back(c);
+        }
+
     }
 
 private:

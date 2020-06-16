@@ -11,7 +11,6 @@
 #include "memory.hh"
 #include "process.hh"
 #include <map>
-#include "util.hh"
 #include "binary.hh"
 
 namespace gunplan::cplusplus::machine {
@@ -28,7 +27,7 @@ namespace gunplan::cplusplus::machine {
                          {"esi", &tss.esi},
                          {"edi", &tss.edi}};
 
-        LDT *gdt[20];
+        LDT *gdt;
         cache_block cache[64];
         opFN pushFn = [&](const std::string &val) {
             unsigned long k = 0;
@@ -133,19 +132,18 @@ namespace gunplan::cplusplus::machine {
         };
     public:
 
-        cpu(memory *mm, process *pc) : mm(mm), pc(pc) {}
+        cpu(memory *mm, process *pc) : mm(mm), pc(pc) {
+            gdt = new LDT[20];
+        }
 
         virtual ~cpu() {
             delete mm;
             delete pc;
+            delete gdt;
         }
 
         [[nodiscard]] const m_cpu &getTss() const {
             return tss;
-        }
-
-        void setTss(const m_cpu &tss) {
-            cpu::tss = tss;
         }
 
         [[nodiscard]] memory *getMm() const {
@@ -163,9 +161,6 @@ namespace gunplan::cplusplus::machine {
             return lang;
         }
 
-        void setPc(process *p) {
-            cpu::pc = p;
-        }
 
         void analyizer(std::string basicString) {
             auto oper = strings::spilt(basicString, " ")[0];
