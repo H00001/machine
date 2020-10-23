@@ -26,8 +26,7 @@ push %123
 push %456
 echo $eax
 echo hello
-add $eax,%-1
-jne $eax,loop
+add_process $eax,%-1
 call fun1
 call fun22
 END

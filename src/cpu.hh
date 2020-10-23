@@ -27,7 +27,7 @@ namespace gunplan::cplusplus::machine {
                          {"esi", &tss.esi},
                          {"edi", &tss.edi}};
 
-        LDT *gdt;
+        segment_disruptor *gdt;
         cache_block cache[64];
         opFN pushFn = [&](const std::string &val) {
             unsigned long k = 0;
@@ -46,7 +46,7 @@ namespace gunplan::cplusplus::machine {
         // lambda
         opFN callFn = [&](const std::string &val) {
             pushStack((unsigned long) tss.rip);
-            tss.rip = (*tss.func_map)[val];
+            tss.rip = std::stoi(val);
         };
 
         opFN ret = [&](const std::string &val) {
@@ -83,11 +83,7 @@ namespace gunplan::cplusplus::machine {
             auto o = strings::Analyze(val, &regHeap);
             // this is a bug operval is it not ul
             tss.cs = o->size() == 2 ? o->front()->operval : tss.cs;
-            if (o->back()->type == str) {
-                tss.rip = (*tss.func_map)[o->back()->operStr];
-            } else {
-                tss.rip = o->back()->operval;
-            }
+            tss.rip = std::stoi(o->back()->operStr);
         };
 
         opFN echoFn = [&](std::string val) {
@@ -119,21 +115,21 @@ namespace gunplan::cplusplus::machine {
             tss.eax = r + l;
         };
 
-        operatorMap operMap = {{"push", pushFn},
-                               {"pop",  popFn},
-                               {"call", callFn},
-                               {"ret",  ret},
-                               {"mov",  movFn},
-                               {"echo", echoFn},
-                               {"add",  add},
-                               {"jmp",  jmp},
-                               {"je",   je},
-                               {"jne",  jne}
+        operatorMap operMap = {{"push",        pushFn},
+                               {"pop",         popFn},
+                               {"call",        callFn},
+                               {"ret",         ret},
+                               {"mov",         movFn},
+                               {"echo",        echoFn},
+                               {"add_process", add},
+                               {"jmp",         jmp},
+                               {"je",          je},
+                               {"jne",         jne}
         };
     public:
 
         cpu(memory *mm, process *pc) : mm(mm), pc(pc) {
-            gdt = new LDT[20];
+            gdt = new segment_disruptor[20];
         }
 
         virtual ~cpu() {
@@ -151,12 +147,12 @@ namespace gunplan::cplusplus::machine {
         }
 
         void pushStack(unsigned long val) {
-            *(memory::transfer<cpu_register *>(tss.seg_divide, tss.ss, tss.esp)) = val;
+            memory::hd_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.ss}, tss.esp)] = val;
             tss.esp++;
         }
 
         unsigned long popStack() {
-            auto lang = *(memory::transfer<cpu_register *>(tss.seg_divide, tss.ss, tss.esp - 1));
+            auto lang = memory::hd_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.ss}, tss.esp - 1)];
             tss.esp--;
             return lang;
         }
@@ -170,9 +166,10 @@ namespace gunplan::cplusplus::machine {
             }
         }
 
-        void execute() {
+        void execute(segment_disruptor *ldt) {
+            tss.ldt_cache = ldt;
             while (true) {
-                tss.pc = *(memory::transfer<std::string *>(tss.seg_divide, tss.cs, tss.rip - 1));
+                tss.pc = memory::hd_code_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip - 1)];
                 if (tss.pc == "END") {
                     break;
                 }
@@ -182,10 +179,10 @@ namespace gunplan::cplusplus::machine {
         }
 
         void PushProcess(const std::string &s) {
-            pc->add(mm->load(s));
+            pc->add_process(mm->load(s));
             task_struct *next = pc->getProcess();
             memmove(&tss, next, sizeof(task_struct));
-            execute();
+            execute(next->ldt);
         }
 
     };

@@ -10,12 +10,11 @@
 
 #endif //MACHINE_UTIL_HH
 
-
 using opFN = std::function<void(std::string)>;
 using rHeap = std::map<std::string, unsigned long *>;
 using operatorMap = std::map<std::string, std::function<void(std::string)>>;
 
-enum operType {
+enum operaType {
     num, reg, str
 };
 
@@ -23,7 +22,7 @@ struct Operator {
     std::string operReg;
     std::string operStr;
     int operval{};
-    operType type;
+    operaType type;
 };
 
 class strings {
@@ -32,14 +31,14 @@ private:
         if (str.empty()) {
             return str;
         }
-        str.erase(0, str.find_first_not_of(" "));
-        str.erase(str.find_last_not_of(" ") + 1);
+        str.erase(0, str.find_first_not_of(' '));
+        str.erase(str.find_last_not_of(' ') + 1);
         return str;
     }
 
 public:
 
-    static std::string *spilt(std::string &s, std::string s1) {
+    static std::string *spilt(std::string &s, const std::string& s1) {
         s = ClearHeadTailSpace(s);
         auto *r = new std::string[2];
         int index = s.find(s1);

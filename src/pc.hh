@@ -15,8 +15,8 @@ using namespace gunplan::cplusplus::machine;
 
 class pc {
 private:
-    memory *mm;
-    process *p;
+    memory *mm{};
+    process *p{};
     cpu *c;
 public:
     pc() {
@@ -31,6 +31,5 @@ public:
         c->PushProcess(filename);
     }
 };
-
 
 #endif //MACHINE_PC_HH

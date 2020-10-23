@@ -9,40 +9,40 @@
 #include <string>
 #include "memory.hh"
 
+
 namespace gunplan::cplusplus::machine {
     struct task_struct {
         m_cpu m;
+        segment_disruptor *ldt;
     };
 
     class process {
-        static const int seg_code_selector = 0;
-        static const int seg_data_selector = 1;
-        static const int seg_stack_selector = 2;
-        static const int seg_heap_selector = 3;
+        const int seg_code_selector = 0;
+        const int seg_data_selector = 1;
+        const int seg_stack_selector = 2;
+        const int seg_ex_selector = 3;
 
     private:
-        int now;
+        int now = 0;
         task_struct *tsks[20];
     public:
-        void add(seg *tsk) {
+        void add_process(seg *tsk) {
             auto *t = new task_struct{};
             t->m.cs = seg_code_selector;
             t->m.ds = seg_data_selector;
             t->m.ss = seg_stack_selector;
-            t->m.hs = seg_heap_selector;
+            t->m.es = seg_ex_selector;
             t->m.rip = 0;
             t->m.ebp = 0;
             t->m.esp = 0;
-            t->m.seg_divide = new std::map<cpu_register, LDT *>();
-            (*(t->m.seg_divide))[t->m.cs] = new LDT{tsk->code, 0, tsk->clen};
-            (*(t->m.seg_divide))[t->m.ds] = new LDT{tsk->data, 0, tsk->dlen};
-            (*(t->m.seg_divide))[t->m.ss] = new LDT{new unsigned long[200], 0, 200};
-            (*(t->m.seg_divide))[t->m.hs] = new LDT{new unsigned long[200], 0, 200};
+            t->ldt = new segment_disruptor[4];
+            t->ldt[0] = segment_disruptor{tsk->code >> 12,tsk->code_len,0};
+            t->ldt[1] = segment_disruptor{tsk->data >> 12,tsk->data_len,0};
+            t->ldt[2] = segment_disruptor{tsk->stack >> 12,tsk->stack_len,0};
 
-            t->m.func_map = new std::map<std::string, int>();
 
             for (int i = 0;; ++i) {
-                std::string s = *((std::string *) (memory::transfer<std::string *>(t->m.seg_divide, t->m.cs, i)));
+                std::string s = memory::hd_code_mem[memory::transfer(t->ldt,segment_selector{t->m.cs}, i)];
                 if (s == "END") {
                     break;
                 }
@@ -50,7 +50,7 @@ namespace gunplan::cplusplus::machine {
                     t->m.rip = i;
                 }
                 if (s.ends_with(":")) {
-                    (*(t->m.func_map))[(*(tsk->code + i)).substr(0, (*(tsk->code + i)).length() - 1)] = i;
+
                 }
 
             }
