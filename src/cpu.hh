@@ -12,10 +12,13 @@
 #include "process.hh"
 #include <map>
 #include "binary.hh"
+#include "common.hh"
 
 namespace gunplan::cplusplus::machine {
-
     class cpu {
+    public:
+        const byte CMP_FLAG = 0;
+        const byte TRAP = 1;
     private:
         m_cpu tss;
         memory *mm = nullptr;
@@ -29,90 +32,85 @@ namespace gunplan::cplusplus::machine {
 
         segment_disruptor *gdt;
         cache_block cache[64];
-        opFN pushFn = [&](const std::string &val) {
-            unsigned long k = 0;
-            if (val.starts_with("%")) {
-                k = stoi(val.substr(1, val.length()));
-            }
-            pushStack(k);
+        opFN pushFn = [&](auto val) -> int {
+            pushStack(val->front()->oper_val);
+            return 0;
         };
 
-        opFN popFn = [&](const std::string &val) {
-            if (val.length() == 0) {
+        opFN popFn = [&](auto val) -> int {
+            if (val->size() == 0) {
                 popStack();
             }
+            return 0;
         };
 
         // lambda
-        opFN callFn = [&](const std::string &val) {
+        opFN callFn = [&](auto val) -> int {
             pushStack((unsigned long) tss.rip);
-            tss.rip = std::stoi(val);
+            tss.rip = val->front()->oper_val;
+            return 0;
         };
 
-        opFN ret = [&](const std::string &val) {
+        opFN ret = [&](auto val) -> int {
             tss.rip = popStack();
+            if (val->size()==1) {
+                *regHeap["ecx"] = val->front()->oper_val;
+            }
+            return 0;
         };
 
-        opFN je = [&](std::string val) {
-            auto o = strings::Analyze(val, &regHeap);
-            if (o->size() == 1) {
-                if (OperatorBitF0(tss.bit_flags)) {
-                    jmp(val);
-                }
-            } else {
-                if (o->front()->operval == 0) {
-                    jmp(o->back()->operStr);
+        opFN je = [&](auto val) -> int {
+            if (OperatorBitF(tss.bit_flags, CMP_FLAG)) {
+                return jmp(val);
+            }
+            return 0;
+        };
+
+        opFN jne = [&](auto val) -> auto {
+            if (!OperatorBitF(tss.bit_flags, CMP_FLAG)) {
+                return jmp(val);
+            }
+            return 0;
+        };
+
+        opFN jmp = [&](auto val) -> auto {
+            tss.cs = val->size() == 2 ? val->front()->oper_val : tss.cs;
+            tss.rip = val->back()->oper_val;
+            return 0;
+        };
+
+        opFN echoFn = [&](auto val) -> auto {
+            for (auto &i:*val) {
+                if (i->oper_type == str) {
+                    std::cout << i->oper_str << std::endl;
+                } else if (i->oper_type == reg) {
+                    std::cout << i->oper_val << std::endl;
                 }
             }
+            return 0;
         };
 
-        opFN jne = [&](std::string val) {
-            auto o = strings::Analyze(val, &regHeap);
-            if (o->size() == 1) {
-                if (!OperatorBitF0(tss.bit_flags)) {
-                    jmp(val);
-                }
-            } else {
-                if (o->front()->operval != 0) {
-                    jmp(o->back()->operStr);
-                }
-            }
-        };
-
-        opFN jmp = [&](std::string val) {
-            auto o = strings::Analyze(val, &regHeap);
-            // this is a bug operval is it not ul
-            tss.cs = o->size() == 2 ? o->front()->operval : tss.cs;
-            tss.rip = std::stoi(o->back()->operStr);
-        };
-
-        opFN echoFn = [&](std::string val) {
-            auto o = strings::Analyze(val, &regHeap);
-            for (auto &i:*o) {
-                if (i->type == str) {
-                    std::cout << i->operStr << std::endl;
-                } else if (i->type == reg) {
-                    std::cout << *regHeap[i->operReg] << std::endl;
-                }
-            }
-        };
-
-        opFN movFn = [&](std::string val) {
-            auto o = strings::Analyze(val, &regHeap);
+        opFN movFn = [&](auto val) -> auto {
             int l_mv_r;
-            if (o->front()->type == num) {
-                l_mv_r = o->front()->operval;
+            if (val->back()->oper_type == reg) {
+                *(val->back()->oper_reg) = val->front()->oper_val;
             }
-            if (o->back()->type == reg) {
-                *regHeap[o->back()->operReg] = l_mv_r;
-            }
+            return 0;
         };
 
-        opFN add = [&](std::string val) {
-            auto o = strings::Analyze(val, &regHeap);
-            int l = o->front()->operval;
-            int r = o->back()->operval;
+        opFN add = [&](auto val) -> int {
+            int l = val->front()->oper_val;
+            int r = val->back()->oper_val;
             tss.eax = r + l;
+            return 0;
+        };
+
+        opFN exit = [&](const auto val) -> int {
+            return val->front()->oper_val;
+        };
+        opFN cmpFn = [&](const std::list<oper_code*>* val) -> int {
+            OperatorBitG(tss.bit_flags, CMP_FLAG, val->front()->oper_val == val->back()->oper_val);
+            return 0;
         };
 
         operatorMap operMap = {{"push",        pushFn},
@@ -124,15 +122,24 @@ namespace gunplan::cplusplus::machine {
                                {"add_process", add},
                                {"jmp",         jmp},
                                {"je",          je},
-                               {"jne",         jne}
+                               {"jne",         jne},
+                               {"exit",        exit},
+                               {"cmp",         cmpFn}
         };
     public:
 
-        cpu(memory *mm, process *pc) : mm(mm), pc(pc) {
+        cpu(memory
+            *mm,
+            process *pc
+        ) :
+
+                mm(mm), pc(pc) {
             gdt = new segment_disruptor[20];
         }
 
-        virtual ~cpu() {
+        virtual ~
+
+        cpu() {
             delete mm;
             delete pc;
             delete gdt;
@@ -158,22 +165,72 @@ namespace gunplan::cplusplus::machine {
         }
 
 
-        void analyizer(std::string basicString) {
+        int decode(std::string basicString) {
             auto oper = strings::spilt(basicString, " ")[0];
             auto val = strings::spilt(basicString, " ")[1];
-            if (operMap.count(oper) == 1) {
-                operMap[oper](val);
+            int r;
+            auto o = decode0(val, &regHeap);
+            if ((operMap.count(oper) == 1)) {
+                r = operMap[oper](o);
+            }
+            delete o;
+            return r;
+        }
+
+        static std::list<oper_code *> *decode0(std::string &s, rHeap *h) {
+            auto *list = new std::list<oper_code *>;
+            if (strings::trim(s).empty()) {
+                return list;
+            }
+            int opIndex = s.find(',');
+            if (opIndex < 0) {
+                list->push_back(operAna(s, h));
+            } else {
+                sp(s, h, list);
+            }
+            return list;
+        }
+
+
+        static void sp(std::string &s, rHeap *h, std::list<oper_code *> *list) {
+            auto op = strings::spilt(s, ",");
+            list->push_back(operAna(op[0], h));
+            auto c = operAna(op[1], h);
+            int k = c->oper_str.find(',');
+            if (k > 0) {
+                sp(c->oper_str, h, list);
+            } else {
+                list->push_back(c);
             }
         }
+
+        static oper_code *operAna(std::string &o, rHeap *h) {
+            auto *op = new oper_code;
+            char flag = o.c_str()[0];
+            op->oper_str = o;
+            if (flag == '%') {
+                op->oper_type = num;
+                op->oper_val = std::stoi(o.substr(1, o.length()));
+            } else if (flag == '$') {
+                op->oper_type = reg;
+                op->oper_reg_name = (o.substr(1, o.length()));
+                op->oper_val = *(*h)[op->oper_reg_name];
+                op->oper_reg = (*h)[op->oper_reg_name];
+            } else {
+                op->oper_type = str;
+            }
+            return op;
+        }
+
 
         void execute(segment_disruptor *ldt) {
             tss.ldt_cache = ldt;
             while (true) {
-                tss.pc = memory::hd_code_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip - 1)];
-                if (tss.pc == "END") {
+                tss.pc = memory::hd_code_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.cs},
+                                                              tss.rip - 1)];
+                if ((decode(tss.pc) != 0)) {
                     break;
                 }
-                analyizer(tss.pc);
                 tss.rip++;
             }
         }
@@ -186,6 +243,7 @@ namespace gunplan::cplusplus::machine {
         }
 
     };
+
 
 }
 #endif //MACHINE_CPU_HH

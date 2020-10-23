@@ -16,7 +16,7 @@ auto OperatorBitF = [](unsigned long x, short p) -> bool {
     return (x & (1 << p));
 };
 
-auto OperatorBitF0 = [](unsigned long x) {
+auto OperatorBiF0 = [](unsigned long x) {
     return OperatorBitF(x, 0);
 };
 

@@ -25,6 +25,7 @@ namespace gunplan::cplusplus::machine {
         int data_len;
         unsigned long stack;
         int stack_len;
+        unsigned long ip;
     };
 
 
@@ -41,23 +42,36 @@ namespace gunplan::cplusplus::machine {
     class memory {
 
     private:
-        byte *analyze_code(int offset, int length) {
+        unsigned int analyze_code(int offset, int length) {
             auto *base = hd_code_mem + offset;
+            unsigned int ip = 0;
+            bool in_main = false;
+            bool end_ret = true;
             std::map<std::string, address> addr_map;
             for (int i = 0; i < length; ++i) {
                 if (base[i].ends_with(":")) {
                     addr_map.insert(std::map<std::string, int>::value_type(hd_code_mem[i], i));
+                    in_main = !end_ret;
+                }
+                if (strings::trim(base[i]).starts_with("ret") && in_main && !end_ret) {
+                    base[i].replace(0, 3, "exit");
+                    end_ret = true;
+                }
+                if (strings::trim(base[i]).starts_with("__start:")) {
+                    ip = i;
+                    in_main = true;
+                    end_ret = false;
                 }
             }
             for (int i = 0; i < length; ++i) {
-                if (base[i].starts_with("call") || base[i].starts_with("jmp") || base[i].starts_with("je") || base[i].starts_with("jne")) {
+                if (base[i].starts_with("call") || base[i].starts_with("jmp") || base[i].starts_with("je") ||
+                    base[i].starts_with("jne")) {
                     std::vector<std::string> v(std::sregex_token_iterator(base[i].begin(), base[i].end(), ws_re, -1),
                                                std::sregex_token_iterator());
-                    base[i] = v[0] + " " + std::to_string(addr_map[v[1]+":"]);
-
+                    base[i] = v[0] + " %" + std::to_string(addr_map[v[1] + ":"]);
                 }
             }
-            printf("ss");
+            return ip;
         }
 
     public:
@@ -105,8 +119,8 @@ namespace gunplan::cplusplus::machine {
                 }
             }
             byte *data = analyze_data(d_buff, ldata);
-            analyze_code(0, lcode);
-            return new seg{0, lcode, 0, ldata, 1024, 1024};
+            unsigned long ip = analyze_code(0, lcode);
+            return new seg{0, lcode, 0, ldata, 1024, 1024, ip};
         }
 
 
@@ -114,7 +128,7 @@ namespace gunplan::cplusplus::machine {
             if (offset > ldt[sd.key].len) {
                 throw -1;
             }
-            return (ldt[sd.key].start << 12) + offset;
+            return (ldt[sd.key].start << 8) + offset;
         }
 
     };

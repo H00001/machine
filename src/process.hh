@@ -35,25 +35,11 @@ namespace gunplan::cplusplus::machine {
             t->m.rip = 0;
             t->m.ebp = 0;
             t->m.esp = 0;
+            t->m.rip = tsk->ip;
             t->ldt = new segment_disruptor[4];
-            t->ldt[0] = segment_disruptor{tsk->code >> 12,tsk->code_len,0};
-            t->ldt[1] = segment_disruptor{tsk->data >> 12,tsk->data_len,0};
-            t->ldt[2] = segment_disruptor{tsk->stack >> 12,tsk->stack_len,0};
-
-
-            for (int i = 0;; ++i) {
-                std::string s = memory::hd_code_mem[memory::transfer(t->ldt,segment_selector{t->m.cs}, i)];
-                if (s == "END") {
-                    break;
-                }
-                if (s == "__start:") {
-                    t->m.rip = i;
-                }
-                if (s.ends_with(":")) {
-
-                }
-
-            }
+            t->ldt[0] = segment_disruptor{tsk->code >> 8,tsk->code_len,0};
+            t->ldt[1] = segment_disruptor{tsk->data >> 8,tsk->data_len,0};
+            t->ldt[2] = segment_disruptor{tsk->stack >> 8,tsk->stack_len,0};
             tsks[now++] = t;
         }
 
