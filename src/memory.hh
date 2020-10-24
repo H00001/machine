@@ -9,8 +9,7 @@
 #include<fstream>
 #include "base.hh"
 #include <map>
-#include "util.hh"
-#include "compile/ProgramCompile.hh"
+#include "compile/program_compile.hh"
 #include <regex>
 
 

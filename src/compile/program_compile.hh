@@ -2,8 +2,8 @@
 // Created by dos DRTT on 10/24/20.
 //
 
-#ifndef MACHINE_PROGRAMCOMPILE_HH
-#define MACHINE_PROGRAMCOMPILE_HH
+#ifndef MACHINE_PROGRAM_COMPILE_HH
+#define MACHINE_PROGRAM_COMPILE_HH
 
 #include <utility>
 #include <string>
@@ -23,7 +23,7 @@ struct data_buffer {
     int length;
 };
 
-class ProgramCompile {
+class program_compile {
 public:
     virtual std::pair<code_buffer, data_buffer> compile_load(std::string file_name) = 0;
 
@@ -31,8 +31,7 @@ public:
 
     virtual void rewrite_to_file(std::string file_name, std::string *b, int len) = 0;
 
-
 };
 
 
-#endif //MACHINE_PROGRAMCOMPILE_HH
+#endif //MACHINE_PROGRAM_COMPILE_HH

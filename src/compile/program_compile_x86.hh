@@ -4,47 +4,45 @@
 
 #include <fstream>
 #include <map>
-#include "ProgramCompile.hh"
+#include <vector>
+#include "program_compile.hh"
 #include "RelocatdFilter.hh"
+#include "../util.hh"
 
-class ProgramCompileX86 : public ProgramCompile {
+class program_compile_x86 : public program_compile {
 private:
-
-
     std::vector<RelocatedFilter *> empty_list{new EmptyFilter()};
     std::vector<RelocatedFilter *> reg_list{new RegisterFilter()};
     std::vector<RelocatedFilter *> ins_list{new InstrumentFilter()};
-
-
 public:
 
-    ProgramCompileX86() = default;
+    program_compile_x86() = default;
 
-    std::pair<code_buffer, data_buffer> compile_load(std::string file_name) override {
+    std::pair<code_buffer, data_buffer> compile_load(std::string file_name) override;
 
-        byte *hd_mem = new byte[mm_size];
-        std::string *hd_code_mem = new std::string[200];
-        int pos = -1;
-        auto *d_buff = new std::string[120];
-        std::ifstream in(file_name);
-        std::string line;
-        int ldata = 0;
-        int lcode = 0;
-        while (getline(in, line)) {
-            if (line == "@data") {
-                pos = 0;
-            } else if (line == "@code") {
-                pos = 1;
-            } else if (pos == 0) {
-                d_buff[ldata] = line;
-                ldata++;
-            } else if (pos == 1) {
-                hd_code_mem[lcode] = line;
-                lcode++;
-            }
-        }
-        return std::pair<code_buffer, data_buffer>(code_buffer{hd_code_mem, lcode}, data_buffer{hd_mem, ldata});
-    }
+//        byte *hd_mem = new byte[mm_size];
+//        std::string *hd_code_mem = new std::string[200];
+//        int pos = -1;
+//        auto *d_buff = new std::string[120];
+//        std::ifstream in(file_name);
+//        std::string line;
+//        int ldata = 0;
+//        int lcode = 0;
+//        while (getline(in, line)) {
+//            if (line == "@data") {
+//                pos = 0;
+//            } else if (line == "@code") {
+//                pos = 1;
+//            } else if (pos == 0) {
+//                d_buff[ldata] = line;
+//                ldata++;
+//            } else if (pos == 1) {
+//                hd_code_mem[lcode] = line;
+//                lcode++;
+//            }
+//        }
+//        return std::pair<code_buffer, data_buffer>(code_buffer{hd_code_mem, lcode}, data_buffer{hd_mem, ldata});
+
 
     unsigned int compile(std::pair<code_buffer, data_buffer> p) override {
         compile_data_segment(p.second.b, p.second.length);

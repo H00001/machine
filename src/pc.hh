@@ -10,8 +10,8 @@
 #include "memory.hh"
 #include "process.hh"
 #include "cpu.hh"
-#include "compile/ProgramCompile.hh"
-#include "compile/ProgramCompileX86.hh"
+#include "compile/program_compile.hh"
+#include "compile/program_compile_x86.hh"
 
 using namespace gunplan::cplusplus::machine;
 
@@ -20,7 +20,7 @@ private:
     memory *mm{};
     process *p{};
     cpu *c;
-    ProgramCompile *compile;
+    program_compile *compile;
 public:
     pc() {
         c = new cpu(new memory(), new process);
@@ -31,7 +31,7 @@ public:
     }
 
     void boot(const std::string &filename) {
-        compile = new ProgramCompileX86();
+        compile = new program_compile_x86();
         auto d = compile->compile_load(filename);
         auto ip = compile->compile(d);
         compile->rewrite_to_file("/tmp/data", d.first.b, d.first.length);

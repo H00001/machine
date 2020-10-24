@@ -9,6 +9,7 @@
 
 #include <string>
 #include <map>
+#include <list>
 
 namespace gunplan::cplusplus::machine {
     using cpu_register = unsigned long;
@@ -35,7 +36,23 @@ namespace gunplan::cplusplus::machine {
         cpu_register bit_flags;
         unsigned long rip;
         std::string pc;
-        segment_disruptor* ldt_cache;
+        segment_disruptor *ldt_cache;
     };
+
+    enum operaType {
+        num, reg, str
+    };
+
+    struct oper_code {
+        unsigned long *oper_reg;
+        std::string oper_str;
+        unsigned short oper_reg_name;
+        long oper_val{};
+        operaType oper_type;
+    };
+
+    using opFN = std::function<int(std::list<oper_code *> *)>;
+    using rHeap = std::map<unsigned short, unsigned long *>;
+    using operatorMap = std::map<int, opFN>;
 
 }

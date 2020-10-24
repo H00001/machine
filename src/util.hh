@@ -9,7 +9,7 @@
 #ifndef MACHINE_UTIL_HH
 #define MACHINE_UTIL_HH
 
-#endif //MACHINE_UTIL_HH
+
 
 
 const std::regex ws_space("\\s+");
@@ -71,3 +71,5 @@ public:
 private:
 
 };
+
+#endif //MACHINE_UTIL_HH

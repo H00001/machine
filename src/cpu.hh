@@ -12,8 +12,8 @@
 #include "process.hh"
 #include <map>
 #include "binary.hh"
-#include "common.hh"
-#include "compile/ProgramCompile.hh"
+#include "compile/program_compile.hh"
+#include "util.hh"
 
 namespace gunplan::cplusplus::machine {
     class cpu {
