@@ -1,29 +1,26 @@
-
 //
-// Created by dos DRTT on 6/13/20.
+// Created by dos DRTT on 10/24/20.
 //
 
-#ifndef MACHINE_CPU_HH
-#define MACHINE_CPU_HH
+#ifndef MACHINE_X86CPU_HH
+#define MACHINE_X86CPU_HH
+
 
 #include <iostream>
-#include <string>
-#include "memory.hh"
-#include "process.hh"
-#include <map>
-#include "binary.hh"
-#include "compile/program_compile.hh"
-#include "util.hh"
+#include "../mm/memory.hh"
+#include "../util/binary.hh"
+#include "../process.hh"
+#include "cpu1.hh"
+#include "../util/strings.hh"
 
 namespace gunplan::cplusplus::machine {
-    class cpu {
+    class x86cpu : public cpu1 {
     public:
         const byte CMP_FLAG = 0;
         const byte TRAP = 1;
     private:
         m_cpu tss;
         memory *mm = nullptr;
-        process *pc = nullptr;
         rHeap regHeap = {{1, &tss.eax},
                          {2, &tss.ebx},
                          {3, &tss.ecx},
@@ -34,14 +31,14 @@ namespace gunplan::cplusplus::machine {
         segment_disruptor *gdt;
         cache_block cache[64]{};
         opFN pushFn = [&](auto val) -> int {
-            pushStack(val->front()->oper_val);
+            push_stack(val->front()->oper_val);
             tss.rip++;
             return 0;
         };
 
         opFN popFn = [&](auto val) -> int {
             if (val->size() == 0) {
-                popStack();
+                pop_stack();
             }
             tss.rip++;
             return 0;
@@ -49,14 +46,14 @@ namespace gunplan::cplusplus::machine {
 
         // lambda
         opFN callFn = [&](auto val) -> int {
-            pushStack((unsigned long) tss.rip + 1);
+            push_stack((unsigned long) tss.rip + 1);
             tss.ebp = tss.esp;
             tss.rip = val->front()->oper_val;
             return 0;
         };
 
         opFN retFn = [&](auto val) -> int {
-            tss.rip = popStack();
+            tss.rip = pop_stack();
             if (val->size() == 1) {
                 *regHeap[3] = val->front()->oper_val + 1;
             }
@@ -147,55 +144,17 @@ namespace gunplan::cplusplus::machine {
                                {0xa,  cmpFn}
         };
     public:
+        x86cpu() = default;
 
-        cpu(memory
-            *mm,
-            process *pc
-        ) :
+        x86cpu(memory *mm);
 
-                mm(mm), pc(pc) {
-            gdt = new segment_disruptor[20];
-        }
+        ~x86cpu() override;
 
-        virtual ~cpu() {
-            delete mm;
-            delete pc;
-            delete gdt;
-        }
+        void push_stack(unsigned long val) override;
 
-        [[nodiscard]] const m_cpu &getTss() const {
-            return tss;
-        }
+        unsigned long pop_stack() override;
 
-        [[nodiscard]] memory *getMm() const {
-            return mm;
-        }
-
-        void pushStack(unsigned long val) {
-            mm->pushStack(val, tss.ldt_cache, tss.ss, tss.esp);
-            printf("esp:%d\n", tss.esp);
-            tss.esp++;
-        }
-
-        unsigned long popStack() {
-            auto data = mm->popStack(tss.ldt_cache, tss.ss, tss.esp);
-            tss.esp--;
-            printf("esp:%d\n", tss.esp);
-            return data;
-        }
-
-
-        int decode(std::string basicString) {
-            auto oper = stoi(strings::spilt(basicString)[0]);
-            auto val = strings::spilt(basicString)[1];
-            int r;
-            auto o = decode0(val, &regHeap);
-            if ((operMap.count(oper) == 1)) {
-                r = operMap[oper](o);
-            }
-            delete o;
-            return r;
-        }
+        int decode(std::string basicString);
 
         static std::list<oper_code *> *decode0(std::string &s, rHeap *h) {
             auto *list = new std::list<oper_code *>;
@@ -243,26 +202,14 @@ namespace gunplan::cplusplus::machine {
         }
 
 
-        void execute(segment_disruptor *ldt) {
-            tss.ldt_cache = ldt;
-            pushStack(32767);
-            while (true) {
-                tss.pc = memory::hd_code_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip)];
-                if ((decode(tss.pc) != 0)) {
-                    break;
-                }
-            }
-        }
+        void execute(segment_disruptor *ldt);
 
-        void PushProcess(std::pair<std::pair<code_buffer, data_buffer>, unsigned long> p) {
-            pc->add_process(mm->load(p));
-            task_struct *next = pc->getProcess();
-            memmove(&tss, next, sizeof(task_struct));
-            execute(next->ldt);
-        }
+        void push_process(std::pair<std::pair<code_buffer, data_buffer>, unsigned long> p) override;
 
+        void set_resource(memory *mm);
     };
 
 
 }
-#endif //MACHINE_CPU_HH
+#endif //MACHINE_CPU1_HH
+

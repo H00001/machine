@@ -2,26 +2,13 @@
 // Created by dos DRTT on 10/24/20.
 //
 
-#ifndef MACHINE_PROGRAM_COMPILE_HH
-#define MACHINE_PROGRAM_COMPILE_HH
+#ifndef MACHINE_PROGRAM_COMPILE_HH_1
+#define MACHINE_PROGRAM_COMPILE_HH_1
 
 #include <utility>
 #include <string>
+#include "../common/const.hh"
 
-const int mm_size = 1024;
-using byte = unsigned char;
-using offset = unsigned int;
-
-
-struct code_buffer {
-    std::string *b;
-    int length;
-};
-
-struct data_buffer {
-    byte *b;
-    int length;
-};
 
 class program_compile {
 public:
@@ -31,6 +18,7 @@ public:
 
     virtual void rewrite_to_file(std::string file_name, std::string *b, int len) = 0;
 
+    virtual ~program_compile() = default;
 };
 
 

@@ -7,9 +7,9 @@
 
 #include<string>
 #include<fstream>
-#include "base.hh"
+#include "../base.hh"
+#include "../common/const.hh"
 #include <map>
-#include "compile/program_compile.hh"
 #include <regex>
 
 
@@ -71,8 +71,6 @@ namespace gunplan::cplusplus::machine {
 
     };
 
-    unsigned long *memory::hd_mem = new unsigned long[mm_size];
-    std::string *memory::hd_code_mem = new std::string[240];
 
 }
 #endif //MACHINE_MEMORY_HH

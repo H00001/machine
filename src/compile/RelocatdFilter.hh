@@ -8,7 +8,7 @@
 #ifndef MACHINE_RELOCATDFILTER_HH
 #define MACHINE_RELOCATDFILTER_HH
 
-#endif //MACHINE_RELOCATDFILTER_HH
+
 
 enum type {
     operation, reg, addr, empty
@@ -95,3 +95,5 @@ public:
     }
 
 };
+
+#endif //MACHINE_RELOCATDFILTER_HH

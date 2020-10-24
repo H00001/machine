@@ -7,13 +7,13 @@
 
 
 #include <string>
-#include "memory.hh"
+#include "mm/memory.hh"
 
 
 namespace gunplan::cplusplus::machine {
     struct task_struct {
         m_cpu m;
-        segment_disruptor *ldt;
+        segment_disruptor *ldt{};
     };
 
     class process {
@@ -24,9 +24,9 @@ namespace gunplan::cplusplus::machine {
 
     private:
         int now = 0;
-        task_struct *tsks[20];
+        task_struct *tsks[20]{};
     public:
-        void add_process(seg *tsk) {
+        int add_process(seg *tsk) {
             auto *t = new task_struct{};
             t->m.cs = seg_code_selector;
             t->m.ds = seg_data_selector;
@@ -37,14 +37,15 @@ namespace gunplan::cplusplus::machine {
             t->m.esp = 0;
             t->m.rip = tsk->ip;
             t->ldt = new segment_disruptor[4];
-            t->ldt[0] = segment_disruptor{tsk->code >> 8,tsk->code_len,0};
-            t->ldt[1] = segment_disruptor{tsk->data >> 8,tsk->data_len,0};
-            t->ldt[2] = segment_disruptor{tsk->stack >> 8,tsk->stack_len,0};
+            t->ldt[0] = segment_disruptor{tsk->code >> 8, tsk->code_len, 0};
+            t->ldt[1] = segment_disruptor{tsk->data >> 8, tsk->data_len, 0};
+            t->ldt[2] = segment_disruptor{tsk->stack >> 8, tsk->stack_len, 0};
             tsks[now++] = t;
+            return now;
         }
 
-        task_struct *getProcess() {
-            return tsks[0];
+        task_struct *getProcess(int id) {
+            return tsks[id];
         }
     };
 }
