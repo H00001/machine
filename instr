@@ -29,4 +29,6 @@ echo hello
 add_process $eax,%-1
 call fun1
 call fun22
+pop
+pop
 ret %0

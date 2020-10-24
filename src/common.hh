@@ -19,7 +19,7 @@ namespace gunplan::cplusplus::machine {
     struct oper_code {
         unsigned long *oper_reg;
         std::string oper_str;
-        std::string oper_reg_name;
+        unsigned short oper_reg_name;
         long oper_val{};
         operaType oper_type;
     };

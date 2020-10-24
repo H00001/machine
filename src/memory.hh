@@ -43,7 +43,7 @@ namespace gunplan::cplusplus::machine {
 
     private:
     public:
-        static byte *hd_mem;
+        static unsigned long *hd_mem;
         static std::string *hd_code_mem;
 
 
@@ -72,8 +72,8 @@ namespace gunplan::cplusplus::machine {
 
     };
 
-    byte *memory::hd_mem = new byte[mm_size];
-    std::string *memory::hd_code_mem = new std::string[200];
+    unsigned long *memory::hd_mem = new unsigned long[mm_size];
+    std::string *memory::hd_code_mem = new std::string[240];
 
 }
 #endif //MACHINE_MEMORY_HH

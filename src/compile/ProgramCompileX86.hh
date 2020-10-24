@@ -5,34 +5,23 @@
 #include <fstream>
 #include <map>
 #include "ProgramCompile.hh"
+#include "RelocatdFilter.hh"
 
 class ProgramCompileX86 : public ProgramCompile {
 private:
-    using compile_code = std::map<std::string, int>;
-    using compile_register = std::map<std::string, int>;
-    compile_code instrument_table = {{"push",        0xb},
-                                     {"pop",         0x1},
-                                     {"call",        0x2},
-                                     {"ret",         0x3},
-                                     {"mov",         0x4},
-                                     {"echo",        0x77},
-                                     {"add_process", 0x5},
-                                     {"jmp",         0x6},
-                                     {"je",          0x7},
-                                     {"jne",         0x8},
-                                     {"exit",        0x9},
-                                     {"cmp",         0xa},
-    };
 
-    compile_register reg_replace = {{"eax", 0x1},
-                                    {"ebx", 0x2},
-                                    {"ecx", 0x3},
-                                    {"edx", 0x4},
-                                    {"esi", 0x5},
-                                    {"edi", 0x6}};
+
+    std::vector<RelocatedFilter *> empty_list{new EmptyFilter()};
+    std::vector<RelocatedFilter *> reg_list{new RegisterFilter()};
+    std::vector<RelocatedFilter *> ins_list{new InstrumentFilter()};
+
 
 public:
-    std::pair<code_buffer, data_buffer> compile_load(std::string file_name) {
+
+    ProgramCompileX86() = default;
+
+    std::pair<code_buffer, data_buffer> compile_load(std::string file_name) override {
+
         byte *hd_mem = new byte[mm_size];
         std::string *hd_code_mem = new std::string[200];
         int pos = -1;
@@ -57,12 +46,12 @@ public:
         return std::pair<code_buffer, data_buffer>(code_buffer{hd_code_mem, lcode}, data_buffer{hd_mem, ldata});
     }
 
-    unsigned int compile(std::pair<code_buffer, data_buffer> p) {
+    unsigned int compile(std::pair<code_buffer, data_buffer> p) override {
         compile_data_segment(p.second.b, p.second.length);
         return compile_code_segment(p.first.b, p.first.length);
     }
 
-    void rewrite_to_file(std::string file_name, std::string *b, int len) {
+    void rewrite_to_file(std::string file_name, std::string *b, int len) override {
         std::ofstream os(file_name);
         for (int i = 0; i < len; ++i) {
             os << b[i] << std::endl;
@@ -75,33 +64,43 @@ public:
 private:
     unsigned int compile_code_segment(std::string *base, int length) {
         unsigned int ip = 0;
-        bool in_main = false;
-        bool end_ret = true;
         std::map<std::string, offset> addr_map;
         for (int i = 0; i < length; ++i) {
             std::string s = strings::trim(base[i]);
             if (s.empty()) {
+                for (auto &iter : empty_list) {
+                    s = iter->relocate(s);
+                }
+                base[i] = s;
+                continue;
+            }
+            if (base[i].ends_with(":")) {
+                ip = s.starts_with("__start:") && ip == 0 ? i : ip;
+                addr_map.insert(std::map<std::string, int>::value_type(base[i], i + 1));
                 base[i] = "0 %0";
                 continue;
             }
-            if (s.starts_with("ret") && in_main && !end_ret) {
-                base[i].replace(0, 3, "exit");
-                end_ret = true;
+            auto div = strings::spilt1(base[i], " ");
+            auto op = div[0];
+            for (auto &iter : ins_list) {
+                op = iter->relocate(op);
             }
-            if (base[i].ends_with(":")) {
-                addr_map.insert(std::map<std::string, int>::value_type(base[i], i));
-                in_main = !end_ret;
-                base[i] = "0 %0";
-            } else {
-                auto div = strings::spilt(base[i]);
-                base[i].replace(0, div[0].length(), std::to_string(instrument_table[div[0]]));
+            if (div.size() == 1) {
+                base[i] = op;
+                continue;
             }
+            auto ins = strings::spilt_reg(div[1]);
+            std::string c3d4 = " ";
+            for (auto dt:ins) {
+                for (auto &iter : reg_list) {
+                    if (iter->match(dt[0])) {
+                        dt = iter->relocate(dt);
+                    }
+                }
+                c3d4.append(dt + ",");
+            }
+            base[i] = op + c3d4.substr(0, c3d4.length() - 1);
 
-            if (s.starts_with("__start:")) {
-                ip = i;
-                in_main = true;
-                end_ret = false;
-            }
         }
         for (int i = 0; i < length; ++i) {
 
@@ -115,6 +114,6 @@ private:
     }
 
     unsigned int compile_data_segment(byte *base, int length) {
-
+        return 0;
     }
 };
