@@ -4,7 +4,7 @@ dtc:
 
 @code
 fun1:
-echo frank aime tiantian
+echo frank,aime,tiantian
 ret
 
 fun22:
@@ -29,4 +29,4 @@ echo hello
 add_process $eax,%-1
 call fun1
 call fun22
-ret
+ret %0

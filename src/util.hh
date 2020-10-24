@@ -4,6 +4,7 @@
 
 #include <string>
 #include <list>
+#include <regex>
 
 #ifndef MACHINE_UTIL_HH
 #define MACHINE_UTIL_HH
@@ -11,7 +12,8 @@
 #endif //MACHINE_UTIL_HH
 
 
-
+const std::regex ws_space("\\s+");
+const std::regex ws_reg(",");
 
 
 class strings {
@@ -34,15 +36,17 @@ public:
         return str;
     }
 
-    static std::string *spilt(std::string &s, const std::string &s1) {
-        s = ClearHeadTailSpace(s);
-        auto *r = new std::string[2];
-        int index = s.find(s1);
-        r[0] = s.substr(0, index);
-        r[1] = (index < 0) ? "" : s.substr(index + 1, s.length());
-        return r;
+    static std::vector<std::string> spilt(std::string &s) {
+        std::vector<std::string> v(std::sregex_token_iterator(s.begin(), s.end(), ws_space, -1),
+                                   std::sregex_token_iterator());
+        return v;
     }
 
+    static std::vector<std::string> spilt_reg(std::string &s) {
+        std::vector<std::string> v(std::sregex_token_iterator(s.begin(), s.end(), ws_reg, -1),
+                                   std::sregex_token_iterator());
+        return v;
+    }
 
 
 private:

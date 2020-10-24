@@ -8,7 +8,7 @@
 #endif //MACHINE_BINARY_HH
 
 auto OperatorBitG = [](unsigned long x, short p, bool b) {
-    unsigned long mv = 1ul << p;
+    unsigned long mv = 1 << p;
     return b ? (x | mv) : (x & ~(mv));
 };
 

@@ -13,6 +13,7 @@
 #include <map>
 #include "binary.hh"
 #include "common.hh"
+#include "compile/ProgramCompile.hh"
 
 namespace gunplan::cplusplus::machine {
     class cpu {
@@ -23,15 +24,15 @@ namespace gunplan::cplusplus::machine {
         m_cpu tss;
         memory *mm = nullptr;
         process *pc = nullptr;
-        rHeap regHeap = {{"eax", &tss.eax},
-                         {"ebx", &tss.ebx},
-                         {"ecx", &tss.ecx},
-                         {"edx", &tss.edx},
-                         {"esi", &tss.esi},
-                         {"edi", &tss.edi}};
+        rHeap regHeap = {{1, &tss.eax},
+                         {2, &tss.ebx},
+                         {3, &tss.ecx},
+                         {4, &tss.edx},
+                         {5, &tss.esi},
+                         {6, &tss.edi}};
 
         segment_disruptor *gdt;
-        cache_block cache[64];
+        cache_block cache[64]{};
         opFN pushFn = [&](auto val) -> int {
             pushStack(val->front()->oper_val);
             return 0;
@@ -53,7 +54,7 @@ namespace gunplan::cplusplus::machine {
 
         opFN ret = [&](auto val) -> int {
             tss.rip = popStack();
-            if (val->size()==1) {
+            if (val->size() == 1) {
                 *regHeap["ecx"] = val->front()->oper_val;
             }
             return 0;
@@ -108,23 +109,28 @@ namespace gunplan::cplusplus::machine {
         opFN exit = [&](const auto val) -> int {
             return val->front()->oper_val;
         };
-        opFN cmpFn = [&](const std::list<oper_code*>* val) -> int {
+        opFN cmpFn = [&](const std::list<oper_code *> *val) -> int {
             OperatorBitG(tss.bit_flags, CMP_FLAG, val->front()->oper_val == val->back()->oper_val);
             return 0;
         };
 
-        operatorMap operMap = {{"push",        pushFn},
-                               {"pop",         popFn},
-                               {"call",        callFn},
-                               {"ret",         ret},
-                               {"mov",         movFn},
-                               {"echo",        echoFn},
-                               {"add_process", add},
-                               {"jmp",         jmp},
-                               {"je",          je},
-                               {"jne",         jne},
-                               {"exit",        exit},
-                               {"cmp",         cmpFn}
+        opFN empFN = [&](const std::list<oper_code *> *val) -> int {
+            return 0;
+        };
+
+        operatorMap operMap = {{0x0,  empFN},
+                               {0xb,  pushFn},
+                               {0x1,  popFn},
+                               {0x2,  callFn},
+                               {0x3,  ret},
+                               {0x4,  movFn},
+                               {0x77, echoFn},
+                               {0x5,  add},
+                               {0x6,  jmp},
+                               {0x7,  je},
+                               {0x8,  jne},
+                               {0x9,  exit},
+                               {0xa,  cmpFn}
         };
     public:
 
@@ -137,9 +143,7 @@ namespace gunplan::cplusplus::machine {
             gdt = new segment_disruptor[20];
         }
 
-        virtual ~
-
-        cpu() {
+        virtual ~cpu() {
             delete mm;
             delete pc;
             delete gdt;
@@ -154,24 +158,28 @@ namespace gunplan::cplusplus::machine {
         }
 
         void pushStack(unsigned long val) {
-            memory::hd_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.ss}, tss.esp)] = val;
+            mm->pushStack(val, tss.ldt_cache, tss.ss, tss.esp);
             tss.esp++;
         }
 
         unsigned long popStack() {
-            auto lang = memory::hd_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.ss}, tss.esp - 1)];
+            auto data = mm->popStack(tss.ldt_cache, tss.ss, tss.esp);
             tss.esp--;
-            return lang;
+            return data;
         }
 
 
         int decode(std::string basicString) {
-            auto oper = strings::spilt(basicString, " ")[0];
-            auto val = strings::spilt(basicString, " ")[1];
+            auto oper = stoi(strings::spilt(basicString)[0]);
+            auto val = strings::spilt(basicString)[1];
             int r;
             auto o = decode0(val, &regHeap);
             if ((operMap.count(oper) == 1)) {
                 r = operMap[oper](o);
+            }
+            // to do exit
+            if (oper == 0x9) {
+                return -1;
             }
             delete o;
             return r;
@@ -193,7 +201,7 @@ namespace gunplan::cplusplus::machine {
 
 
         static void sp(std::string &s, rHeap *h, std::list<oper_code *> *list) {
-            auto op = strings::spilt(s, ",");
+            auto op = strings::spilt_reg(s);
             list->push_back(operAna(op[0], h));
             auto c = operAna(op[1], h);
             int k = c->oper_str.find(',');
@@ -235,8 +243,8 @@ namespace gunplan::cplusplus::machine {
             }
         }
 
-        void PushProcess(const std::string &s) {
-            pc->add_process(mm->load(s));
+        void PushProcess(std::pair<std::pair<code_buffer, data_buffer>, unsigned long> p) {
+            pc->add_process(mm->load(p));
             task_struct *next = pc->getProcess();
             memmove(&tss, next, sizeof(task_struct));
             execute(next->ldt);

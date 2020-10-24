@@ -37,4 +37,5 @@ namespace gunplan::cplusplus::machine {
         std::string pc;
         segment_disruptor* ldt_cache;
     };
+
 }

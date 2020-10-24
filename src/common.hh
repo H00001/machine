@@ -25,6 +25,6 @@ namespace gunplan::cplusplus::machine {
     };
 
     using opFN = std::function<int(std::list<oper_code *> *)>;
-    using rHeap = std::map<std::string, unsigned long *>;
-    using operatorMap = std::map<std::string, opFN>;
+    using rHeap = std::map<unsigned short, unsigned long *>;
+    using operatorMap = std::map<int, opFN>;
 }
