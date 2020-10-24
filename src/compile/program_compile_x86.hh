@@ -16,6 +16,7 @@ private:
     std::vector<RelocatedFilter *> empty_list{new EmptyFilter()};
     std::vector<RelocatedFilter *> reg_list{new RegisterFilter()};
     std::vector<RelocatedFilter *> ins_list{new InstrumentFilter()};
+    buf buf1;
 public:
 
     program_compile_x86() = default;
@@ -24,7 +25,7 @@ public:
 
     unsigned int compile(std::pair<code_buffer, data_buffer> p) override;
 
-    void rewrite_to_file(std::string file_name, std::string *b, int len) override;
+    void rewrite_to_file(std::string file_name) override;
 
     virtual ~program_compile_x86() override;
 

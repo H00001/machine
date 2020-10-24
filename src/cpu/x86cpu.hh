@@ -9,7 +9,6 @@
 #include <iostream>
 #include "../mm/memory.hh"
 #include "../util/binary.hh"
-#include "../process.hh"
 #include "cpu1.hh"
 #include "../util/strings.hh"
 
@@ -57,7 +56,6 @@ namespace gunplan::cplusplus::machine {
             if (val->size() == 1) {
                 *regHeap[3] = val->front()->oper_val + 1;
             }
-            printf("rip:%d\n", tss.rip);
             if (tss.rip == 32767) {
                 // exit
                 return -1;
@@ -202,13 +200,12 @@ namespace gunplan::cplusplus::machine {
         }
 
 
-        void execute(segment_disruptor *ldt);
+        int execute();
 
-        void push_process(std::pair<std::pair<code_buffer, data_buffer>, unsigned long> p) override;
+        int push_process(int pid) override;
 
-        void set_resource(memory *mm);
+        void set_resource(memory *mm) override;
     };
-
 
 }
 #endif //MACHINE_CPU1_HH

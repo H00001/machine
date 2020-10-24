@@ -8,10 +8,10 @@
 #include <utility>
 
 #include "mm/memory.hh"
-#include "process.hh"
 #include "cpu/cpu1.hh"
 #include "compile/program_compile_x86.hh"
 #include "cpu/x86cpu.hh"
+#include "proc/process.hh"
 
 using namespace gunplan::cplusplus::machine;
 
@@ -39,8 +39,10 @@ public:
     void launch(const std::string &filename) const {
         auto d = compile->compile_load(filename);
         auto ip = compile->compile(d);
-        compile->rewrite_to_file("/Users/dosdrtt/tmp/data", d.first.b, d.first.length);
-        c->push_process(std::pair<std::pair<code_buffer, data_buffer>, unsigned long>(d, ip));
+        compile->rewrite_to_file("/Users/dosdrtt/tmp/data");
+        auto *ps = new process(new std::pair<std::pair<code_buffer, data_buffer>, unsigned long>(d, ip));
+        c->push_process(ps->add_process());
+        delete ps;
     }
 
     void destroy() {

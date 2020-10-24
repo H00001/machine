@@ -1,19 +1,18 @@
-#pragma once
+
 
 #include "x86cpu.hh"
+#include "../proc/process.hh"
 
 
 namespace gunplan::cplusplus::machine {
-    void x86cpu::push_process(std::pair<std::pair<code_buffer, data_buffer>, unsigned long> p) {
-        process *proc = new process;
-        int pid = proc->add_process(mm->load(p));
-        task_struct *next = proc->getProcess(pid);
+    int x86cpu::push_process(int pid) {
+        task_struct *next = process::get_process(pid);
         memmove(&tss, next, sizeof(task_struct));
-        this->execute(next->ldt);
+        tss.ldt_cache = next->ldt;
+        return this->execute();
     }
 
-    void x86cpu::execute(segment_disruptor *ldt) {
-        tss.ldt_cache = ldt;
+    int x86cpu::execute() {
         push_stack(32767);
         while (true) {
             tss.pc = memory::hd_code_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip)];
@@ -21,14 +20,15 @@ namespace gunplan::cplusplus::machine {
                 break;
             }
         }
+        return 0;
     }
 
     int x86cpu::decode(std::string basicString) {
         auto oper = stoi(strings::spilt(basicString)[0]);
         auto val = strings::spilt(basicString)[1];
-        int r;
+        int r = 0;
         auto o = decode0(val, &regHeap);
-        if ((operMap.count(oper) == 1)) {
+        if (operMap.count(oper) == 1) {
             r = operMap[oper](o);
         }
         delete o;
@@ -45,7 +45,6 @@ namespace gunplan::cplusplus::machine {
 
     void x86cpu::push_stack(unsigned long val) {
         mm->pushStack(val, tss.ldt_cache, tss.ss, tss.esp);
-        printf("esp:%d\n", tss.esp);
         tss.esp++;
     }
 

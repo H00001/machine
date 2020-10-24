@@ -26,7 +26,8 @@ std::pair<code_buffer, data_buffer> program_compile_x86::compile_load(std::strin
             lcode++;
         }
     }
-    return std::pair<code_buffer, data_buffer>(code_buffer{hd_code_mem, lcode}, data_buffer{hd_mem, ldata});
+    this->buf1 = std::pair<code_buffer, data_buffer>(code_buffer{hd_code_mem, lcode}, data_buffer{hd_mem, ldata});
+    return this->buf1;
 }
 
 unsigned int program_compile_x86::compile(std::pair<code_buffer, data_buffer> p) {
@@ -34,10 +35,10 @@ unsigned int program_compile_x86::compile(std::pair<code_buffer, data_buffer> p)
     return compile_code_segment(p.first.b, p.first.length);
 }
 
-void program_compile_x86::rewrite_to_file(std::string file_name, std::string *b, int len) {
+void program_compile_x86::rewrite_to_file(std::string file_name) {
     std::ofstream os(file_name);
-    for (int i = 0; i < len; ++i) {
-        os << b[i] << std::endl;
+    for (int i = 0; i < buf1.first.length; ++i) {
+        os << buf1.first.b[i] << std::endl;
     }
     os.close();
 }
@@ -93,6 +94,4 @@ unsigned program_compile_x86::compile_code_segment(std::string *base, int length
     return ip;
 }
 
-program_compile_x86::~program_compile_x86() {
-
-};
+program_compile_x86::~program_compile_x86() = default;;

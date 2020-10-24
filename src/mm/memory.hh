@@ -7,26 +7,15 @@
 
 #include<string>
 #include<fstream>
-#include "../base.hh"
+#include "../common/base.hh"
 #include "../common/const.hh"
 #include <map>
 #include <regex>
 
 
 namespace gunplan::cplusplus::machine {
-    const unsigned long mm_size = 16 * 1024 * 1024;
+    const unsigned long mm_size = 4 * 1024 * 1024;
     using address = unsigned long;
-
-    struct seg {
-        unsigned long code;
-        int code_len;
-        unsigned long data;
-        int data_len;
-        unsigned long stack;
-        int stack_len;
-        unsigned long ip;
-    };
-
 
     struct segment_selector {
         unsigned long key;
@@ -54,11 +43,15 @@ namespace gunplan::cplusplus::machine {
             return memory::hd_mem[transfer(ldt, segment_selector{segment}, offset - 1)];
         }
 
-        seg *load(std::pair<std::pair<code_buffer, data_buffer>, unsigned long> p) {
-            for (int i = 0; i < p.first.first.length; ++i) {
-                hd_code_mem[i] = p.first.first.b[i];
+        static segment_disruptor *load(std::pair<code_buffer, data_buffer> p) {
+            for (int i = 0; i < p.first.length; ++i) {
+                hd_code_mem[i] = p.first.b[i];
             }
-            return new seg{0, p.first.first.length, 0, p.first.second.length, 1024, 1024, p.second};
+            auto *t = new segment_disruptor[3];
+            t[0] = segment_disruptor{transfer(0), p.first.length, 0};
+            t[1] = segment_disruptor{transfer(0), p.second.length, 0};
+            t[2] = segment_disruptor{transfer(0), 1024, 0};
+            return t;
         }
 
 
@@ -67,6 +60,10 @@ namespace gunplan::cplusplus::machine {
                 throw -1;
             }
             return (ldt[sd.key].start << 8) + offset;
+        }
+
+        static address transfer(address physics) {
+            return physics << 8;
         }
 
     };

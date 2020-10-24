@@ -17,7 +17,7 @@ namespace gunplan::cplusplus::machine {
 
         virtual unsigned long pop_stack() = 0;
 
-        virtual void push_process(std::pair<std::pair<code_buffer, data_buffer>, unsigned long> p) = 0;
+        virtual int push_process(int pid) = 0;
 
         virtual void set_resource(memory *mm) = 0;
     };

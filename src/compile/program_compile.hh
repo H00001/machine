@@ -11,12 +11,14 @@
 
 
 class program_compile {
+protected:
+    using buf = std::pair<code_buffer, data_buffer>;
 public:
-    virtual std::pair<code_buffer, data_buffer> compile_load(std::string file_name) = 0;
+    virtual buf compile_load(std::string file_name) = 0;
 
-    virtual unsigned int compile(std::pair<code_buffer, data_buffer>) = 0;
+    virtual unsigned int compile(buf) = 0;
 
-    virtual void rewrite_to_file(std::string file_name, std::string *b, int len) = 0;
+    virtual void rewrite_to_file(std::string file_name) = 0;
 
     virtual ~program_compile() = default;
 };
