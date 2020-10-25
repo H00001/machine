@@ -9,65 +9,44 @@
 #include<fstream>
 #include "../common/base.hh"
 #include "../common/const.hh"
+#include "../util/bitmap.hh"
 #include <map>
 #include <regex>
 
-
+#define M 1024*1024
+#define K 1024
 namespace gunplan::cplusplus::machine {
-    const unsigned long mm_size = 4 * 1024 * 1024;
-    using address = unsigned long;
+    using data_bond = unsigned int;
+    using address_bond = unsigned int;
+    using physics_address = address_bond;
 
     struct segment_selector {
         unsigned long key;
     };
 
-    struct logical_address {
-        segment_selector sel;
-        int offset;
-    };
-
-
     class memory {
-
     private:
+        address_bond *const hd_mem;
+        std::string *const hd_code_mem;
+        bitmap<address_bond> *mem_manager;
     public:
-        static unsigned long *hd_mem;
-        static std::string *hd_code_mem;
 
 
-        void pushStack(unsigned long val, segment_disruptor *ldt, unsigned long segment, unsigned long offset) {
-            memory::hd_mem[transfer(ldt, segment_selector{segment}, offset)] = val;
-        }
+        // create a memory
+        explicit memory(int mb);
 
-        unsigned long popStack(segment_disruptor *ldt, unsigned long segment, unsigned long offset) {
-            return memory::hd_mem[transfer(ldt, segment_selector{segment}, offset - 1)];
-        }
+        std::string fetch_instrument(physics_address addr);
 
-        static segment_disruptor *load(std::pair<code_buffer, data_buffer> p) {
-            for (int i = 0; i < p.first.length; ++i) {
-                hd_code_mem[i] = p.first.b[i];
-            }
-            auto *t = new segment_disruptor[3];
-            t[0] = segment_disruptor{transfer(0), p.first.length, 0};
-            t[1] = segment_disruptor{transfer(0), p.second.length, 0};
-            t[2] = segment_disruptor{transfer(0), 1024, 0};
-            return t;
-        }
+        void push_stack(data_bond val, segment_disruptor *ldt, data_bond segment, data_bond offset);
 
+        data_bond pop_stack(segment_disruptor *ldt, data_bond segment, data_bond offset);
 
-        static address transfer(segment_disruptor *ldt, segment_selector sd, cpu_register offset) {
-            if (offset > ldt[sd.key].len) {
-                throw -1;
-            }
-            return (ldt[sd.key].start << 8) + offset;
-        }
+        segment_disruptor *load(std::pair<code_buffer, data_buffer> p);
 
-        static address transfer(address physics) {
-            return physics << 8;
-        }
+        static address_bond transfer(segment_disruptor *ldt, segment_selector sd, address_bond offset);
 
+        virtual ~memory();
     };
-
 
 }
 #endif //MACHINE_MEMORY_HH

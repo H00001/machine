@@ -8,6 +8,7 @@
 
 #include <string>
 #include "../mm/memory.hh"
+#include "../cpu/x86cpu.hh"
 
 
 namespace gunplan::cplusplus::machine {
@@ -26,10 +27,11 @@ namespace gunplan::cplusplus::machine {
 
     private:
         buf *task;
+        int pid;
     public:
         explicit process(buf *task);
 
-        int add_process();
+        int add_process(memory *mm);
 
         static task_struct *get_process(int id);
 

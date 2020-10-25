@@ -7,7 +7,7 @@
 namespace gunplan::cplusplus::machine {
     int x86cpu::push_process(int pid) {
         task_struct *next = process::get_process(pid);
-        memmove(&tss, next, sizeof(task_struct));
+        memmove(&tss, next, sizeof(m_cpu));
         tss.ldt_cache = next->ldt;
         return this->execute();
     }
@@ -15,7 +15,7 @@ namespace gunplan::cplusplus::machine {
     int x86cpu::execute() {
         push_stack(32767);
         while (true) {
-            tss.pc = memory::hd_code_mem[memory::transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip)];
+            tss.pc = mm->fetch_instrument(memory::transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip));
             if ((decode(tss.pc) != 0)) {
                 break;
             }
@@ -24,8 +24,9 @@ namespace gunplan::cplusplus::machine {
     }
 
     int x86cpu::decode(std::string basicString) {
-        auto oper = stoi(strings::spilt(basicString)[0]);
-        auto val = strings::spilt(basicString)[1];
+        auto ss = strings::spilt(basicString);
+        auto oper = stoi(ss[0]);
+        auto val = ss[1];
         int r = 0;
         auto o = decode0(val, &regHeap);
         if (operMap.count(oper) == 1) {
@@ -36,20 +37,19 @@ namespace gunplan::cplusplus::machine {
     }
 
 
-    unsigned long x86cpu::pop_stack() {
-        auto data = mm->popStack(tss.ldt_cache, tss.ss, tss.esp);
+    cpu_register x86cpu::pop_stack() {
+        auto data = mm->pop_stack(tss.ldt_cache, tss.ss, tss.esp);
         tss.esp--;
         return data;
     }
 
 
     void x86cpu::push_stack(unsigned long val) {
-        mm->pushStack(val, tss.ldt_cache, tss.ss, tss.esp);
+        mm->push_stack(val, tss.ldt_cache, tss.ss, tss.esp);
         tss.esp++;
     }
 
     x86cpu::~x86cpu() {
-        delete mm;
         delete gdt;
     }
 

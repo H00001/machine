@@ -22,9 +22,8 @@ namespace gunplan::cplusplus::machine {
 
     }
 
-    int process::add_process() {
+    int process::add_process(memory *mm) {
         static int now = 0;
-
         auto *t = new task_struct{};
         t->m.cs = seg_code_selector;
         t->m.ds = seg_data_selector;
@@ -34,14 +33,15 @@ namespace gunplan::cplusplus::machine {
         t->m.ebp = 0;
         t->m.esp = 0;
         t->m.rip = task->second;
-        t->ldt = memory::load(task->first);
+        t->ldt = mm->load(task->first);
         tsks[now++] = t;
-        return now - 1;
+        pid = now - 1;
+        return pid;
     }
 
 
     process::~process() {
-        delete task;
+        delete tsks[pid];
     }
 
     task_struct *process::get_process(int id) {

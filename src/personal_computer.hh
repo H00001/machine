@@ -19,11 +19,10 @@ using namespace gunplan::cplusplus::machine;
 class personal_computer {
 private:
     memory *mm;
-    process *p{};
-    cpu1 *c;
+    cpu1<cpu_register> *c;
     program_compile *compile;
 public:
-    personal_computer(memory *mm, cpu1 *c, program_compile *comp)
+    personal_computer(memory *mm, cpu1<cpu_register> *c, program_compile *comp)
             : mm(mm), c(c), compile(comp) {}
 
     virtual ~personal_computer() {
@@ -32,21 +31,20 @@ public:
         delete compile;
     }
 
-    void boot() {
+    void init() {
         c->set_resource(mm);
     }
 
-    void launch(const std::string &filename) const {
+    [[nodiscard]] int launch(const std::string &filename) const {
         auto d = compile->compile_load(filename);
         auto ip = compile->compile(d);
         compile->rewrite_to_file("/Users/dosdrtt/tmp/data");
         auto *ps = new process(new std::pair<std::pair<code_buffer, data_buffer>, unsigned long>(d, ip));
-        c->push_process(ps->add_process());
+        auto r = c->push_process(ps->add_process(mm));
         delete ps;
+        return r;
     }
 
-    void destroy() {
-    }
 };
 
 #endif //MACHINE_PERSONAL_COMPUTER_HH
