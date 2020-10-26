@@ -8,6 +8,7 @@
 #include<utility>
 #include <map>
 #include <list>
+#include "../common/const.hh"
 
 using word = unsigned int;
 using double_word = unsigned long;
@@ -17,4 +18,5 @@ using offset = unsigned int;
 using address_map = std::map<std::string, offset>;
 using compile_register = std::map<std::string, int>;
 using compile_code = std::map<std::string, op_len>;
+using ret = std::tuple<segment_buffer, segment_buffer, unsigned int>;
 #endif //MACHINE_STANDARD_HH

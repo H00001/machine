@@ -5,7 +5,7 @@
 #include "program_compile_x86.hh"
 #include "write_instrument.hh"
 
-std::pair<code_buffer, data_buffer> program_compile_x86::compile_load(std::string file_name) {
+ret program_compile_x86::compile_load(std::string file_name) {
     byte *hd_mem = new byte[mm_size];
     auto *hd_code_mem = new std::string[200];
     int pos = -1;
@@ -27,13 +27,11 @@ std::pair<code_buffer, data_buffer> program_compile_x86::compile_load(std::strin
             lcode++;
         }
     }
-    this->buf1 = std::pair<code_buffer, data_buffer>(code_buffer{hd_code_mem, lcode}, data_buffer{hd_mem, ldata});
-    return this->buf1;
-}
-
-unsigned int program_compile_x86::compile(std::pair<code_buffer, data_buffer> p) {
-    compile_data_segment(p.second.b, p.second.length);
-    return compile_code_segment(p.first.b, p.first.length);
+    int ddlen;
+    b = new word[lcode]{0};
+    int poi = compile_data_segment(d_buff, ldata, b, ddlen);
+    int ip = compile_code_segment(hd_code_mem, lcode, b, len);
+    return ret(segment_buffer{b, len}, segment_buffer{b, ddlen}, ip);
 }
 
 void program_compile_x86::rewrite_to_file(std::string file_name) {
@@ -45,9 +43,8 @@ void program_compile_x86::rewrite_to_file(std::string file_name) {
 }
 
 
-unsigned int program_compile_x86::compile_code_segment(std::string *base, int length) {
+unsigned int program_compile_x86::compile_code_segment(std::string *base, int length, word *lbuf, int &ddlen) {
     unsigned int ip = 0;
-    auto *lbuf = new word[length]{0};
     address_map addr_map;
     int j = 0;
     for (int i = 0; i < length; i++) {
@@ -79,8 +76,7 @@ unsigned int program_compile_x86::compile_code_segment(std::string *base, int le
         }
 
     }
-    len = j + 1;
-    this->b = lbuf;
+    ddlen = j + 1;
     delete[] base;
     return ip;
 }

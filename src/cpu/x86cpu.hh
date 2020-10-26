@@ -41,7 +41,7 @@ namespace gunplan::cplusplus::machine {
         cpu_register esi, edi, esp, ebp;
         cpu_register rs0, rs1, rs2;
         cpu_register bit_flags;
-        unsigned long rip;
+        cpu_register rip;
         std::string pc;
         segment_disruptor *ldt_cache;
 #ifdef _vector_

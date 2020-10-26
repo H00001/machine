@@ -37,9 +37,8 @@ public:
 
     [[nodiscard]] int launch(const std::string &filename) const {
         auto d = compile->compile_load(filename);
-        auto ip = compile->compile(d);
         compile->rewrite_to_file("/Users/dosdrtt/tmp/data");
-        auto *ps = new process(new std::pair<std::pair<code_buffer, data_buffer>, unsigned long>(d, ip));
+        auto *ps = new process(&d);
         auto r = c->push_process(ps->add_process(mm));
         delete ps;
         return r;

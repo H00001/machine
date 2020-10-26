@@ -12,13 +12,8 @@ using byte = unsigned char;
 using offset = unsigned int;
 
 
-struct code_buffer {
-    std::string *b;
-    int length;
-};
-
-struct data_buffer {
-    byte *b;
+struct segment_buffer {
+    offset *b;
     int length;
 };
 

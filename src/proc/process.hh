@@ -12,7 +12,7 @@
 
 
 namespace gunplan::cplusplus::machine {
-    using buf = std::pair<std::pair<code_buffer, data_buffer>, unsigned long>;
+    using buf = std::tuple<segment_buffer, segment_buffer, unsigned int>;
     struct task_struct {
         m_cpu m;
         segment_disruptor *ldt{};

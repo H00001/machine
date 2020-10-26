@@ -27,7 +27,7 @@ namespace gunplan::cplusplus::machine {
     class memory {
     private:
         address_bond *const hd_mem;
-        std::string *const hd_code_mem;
+        address_bond *const hd_code_mem;
         bitmap<address_bond> *mem_manager;
     public:
 
@@ -35,11 +35,11 @@ namespace gunplan::cplusplus::machine {
         // create a memory
         explicit memory(int mb);
 
-        std::string fetch_instrument(physics_address addr);
+        data_bond fetch_instrument(physics_address addr);
 
         void write(address_bond, data_bond data);
 
-        segment_disruptor *load(std::pair<code_buffer, data_buffer> p);
+        segment_disruptor *load(std::pair<segment_buffer, segment_buffer> p);
 
         data_bond read(address_bond addr);
 

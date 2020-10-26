@@ -7,16 +7,13 @@
 
 #include <utility>
 #include <string>
-#include "../common/const.hh"
+#include "standard.hh"
 
 
 class program_compile {
 protected:
-    using buf = std::pair<code_buffer, data_buffer>;
 public:
-    virtual buf compile_load(std::string file_name) = 0;
-
-    virtual unsigned int compile(buf) = 0;
+    virtual ret compile_load(std::string file_name) = 0;
 
     virtual void rewrite_to_file(std::string file_name) = 0;
 

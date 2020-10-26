@@ -12,7 +12,10 @@
 #include <string>
 #include "../mm/memory.hh"
 #include "process.hh"
-
+#include <tuple>
+#include <array>
+#include <iostream>
+#include <utility>
 
 namespace gunplan::cplusplus::machine {
     task_struct **tsks = new task_struct *[20];
@@ -32,8 +35,8 @@ namespace gunplan::cplusplus::machine {
         t->m.rip = 0;
         t->m.ebp = 0;
         t->m.esp = 0;
-        t->m.rip = task->second;
-        t->ldt = mm->load(task->first);
+        t->m.rip = std::get<2>(*task);
+        t->ldt = mm->load(std::pair<segment_buffer, segment_buffer>(std::get<0>(*task), std::get<1>(*task)));
         tsks[now++] = t;
         pid = now - 1;
         return pid;

@@ -6,8 +6,7 @@
 
 namespace gunplan::cplusplus::machine {
 
-
-    memory::memory(int mb) : hd_mem(new address_bond[mb * M]), hd_code_mem(new std::string[mb * M]) {
+    memory::memory(int mb) : hd_mem(new address_bond[mb * M]), hd_code_mem(new data_bond[mb * M]) {
         mem_manager = new bitmap<address_bond>(mb);
     }
 
@@ -18,7 +17,7 @@ namespace gunplan::cplusplus::machine {
     }
 
 
-    segment_disruptor *memory::load(std::pair<code_buffer, data_buffer> p) {
+    segment_disruptor *memory::load(std::pair<segment_buffer, segment_buffer> p) {
         data_bond bit = mem_manager->get_bit_false_set_true();
         if (bit < 0) {
             return nullptr;
@@ -44,7 +43,7 @@ namespace gunplan::cplusplus::machine {
         return this->hd_mem[addr];
     }
 
-    std::string memory::fetch_instrument(physics_address addr) {
+    data_bond memory::fetch_instrument(physics_address addr) {
         return hd_code_mem[addr];
     }
 
