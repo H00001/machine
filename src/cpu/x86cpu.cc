@@ -15,7 +15,7 @@ namespace gunplan::cplusplus::machine {
     int x86cpu::execute() {
         push_stack(32767);
         while (true) {
-            tss.pc = mm->fetch_instrument(memory::transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip));
+            tss.pc = mm->fetch_instrument(transfer(tss.ldt_cache, segment_selector{tss.cs}, tss.rip));
             if ((decode(tss.pc) != 0)) {
                 break;
             }
@@ -38,14 +38,14 @@ namespace gunplan::cplusplus::machine {
 
 
     cpu_register x86cpu::pop_stack() {
-        auto data = mm->pop_stack(tss.ldt_cache, tss.ss, tss.esp);
+        auto data = pop_stack(tss.ldt_cache, tss.ss, tss.esp);
         tss.esp--;
         return data;
     }
 
 
     void x86cpu::push_stack(unsigned long val) {
-        mm->push_stack(val, tss.ldt_cache, tss.ss, tss.esp);
+        push_stack(val, tss.ldt_cache, tss.ss, tss.esp);
         tss.esp++;
     }
 
@@ -59,6 +59,22 @@ namespace gunplan::cplusplus::machine {
 
     void x86cpu::set_resource(memory *mm) {
         this->mm = mm;
+    }
+
+
+    void x86cpu::push_stack(data_bond val, segment_disruptor *ldt, data_bond segment, data_bond offset) {
+        mm->write(transfer(ldt, segment_selector{segment}, offset), val);
+    }
+
+    data_bond x86cpu::pop_stack(segment_disruptor *ldt, data_bond segment, data_bond offset) {
+        return mm->read(transfer(ldt, segment_selector{segment}, offset - 1));
+    }
+
+    address_bond x86cpu::transfer(segment_disruptor *ldt, segment_selector sd, address_bond offset) {
+        if (offset > ldt[sd.key].len) {
+            throw offset;
+        }
+        return (ldt[sd.key].start << 20) + offset;
     }
 
 }

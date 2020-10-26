@@ -17,13 +17,6 @@ namespace gunplan::cplusplus::machine {
         delete mem_manager;
     }
 
-    void memory::push_stack(data_bond val, segment_disruptor *ldt, data_bond segment, data_bond offset) {
-        hd_mem[transfer(ldt, segment_selector{segment}, offset)] = val;
-    }
-
-    data_bond memory::pop_stack(segment_disruptor *ldt, data_bond segment, data_bond offset) {
-        return memory::hd_mem[transfer(ldt, segment_selector{segment}, offset - 1)];
-    }
 
     segment_disruptor *memory::load(std::pair<code_buffer, data_buffer> p) {
         data_bond bit = mem_manager->get_bit_false_set_true();
@@ -42,11 +35,13 @@ namespace gunplan::cplusplus::machine {
 
     }
 
-    address_bond memory::transfer(segment_disruptor *ldt, segment_selector sd, address_bond offset) {
-        if (offset > ldt[sd.key].len) {
-            throw offset;
-        }
-        return (ldt[sd.key].start << 20) + offset;
+
+    void memory::write(address_bond addr, data_bond data) {
+        this->hd_mem[addr] = data;
+    }
+
+    data_bond memory::read(address_bond addr) {
+        return this->hd_mem[addr];
     }
 
     std::string memory::fetch_instrument(physics_address addr) {

@@ -13,6 +13,7 @@
 #include <string>
 #include <list>
 #include <regex>
+#include <vector>
 
 #ifndef MACHINE_UTIL_HH
 #define MACHINE_UTIL_HH
@@ -42,9 +43,13 @@ public:
     }
 
     static std::vector<std::string> spilt(std::string &s) {
-        std::vector<std::string> v(std::sregex_token_iterator(s.begin(), s.end(), ws_space, -1),
-                                   std::sregex_token_iterator());
-        return v;
+        if (s.find(' ') > 0) {
+            std::vector<std::string> v(std::sregex_token_iterator(s.begin(), s.end(), ws_space, -1),
+                                       std::sregex_token_iterator());
+            return v;
+        } else {
+            return std::vector<std::string>({s, ""});
+        }
     }
 
     static std::vector<std::string> spilt_reg(std::string &s) {

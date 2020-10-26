@@ -3,6 +3,7 @@
 //
 
 #include "program_compile_x86.hh"
+#include "write_instrument.hh"
 
 std::pair<code_buffer, data_buffer> program_compile_x86::compile_load(std::string file_name) {
     byte *hd_mem = new byte[mm_size];
@@ -37,60 +38,50 @@ unsigned int program_compile_x86::compile(std::pair<code_buffer, data_buffer> p)
 
 void program_compile_x86::rewrite_to_file(std::string file_name) {
     std::ofstream os(file_name);
-    for (int i = 0; i < buf1.first.length; ++i) {
-        os << buf1.first.b[i] << std::endl;
+    for (int i = 0; i < len; ++i) {
+        os << this->b[i] << std::endl;
     }
     os.close();
 }
 
 
-unsigned program_compile_x86::compile_code_segment(std::string *base, int length) {
+unsigned int program_compile_x86::compile_code_segment(std::string *base, int length) {
     unsigned int ip = 0;
-    std::map<std::string, offset> addr_map;
-    for (int i = 0; i < length; ++i) {
+    auto *lbuf = new word[length]{0};
+    address_map addr_map;
+    int j = 0;
+    for (int i = 0; i < length; i++) {
         std::string s = strings::trim(base[i]);
         if (s.empty()) {
-            for (auto &iter : empty_list) {
-                s = iter->relocate(s);
-            }
-            base[i] = s;
             continue;
         }
         if (base[i].ends_with(":")) {
-            ip = s.starts_with("__start:") && ip == 0 ? i : ip;
-            addr_map.insert(std::map<std::string, int>::value_type(base[i], i + 1));
-            base[i] = "0 %0";
+            ip = s.starts_with("__start:") && ip == 0 ? j : ip;
+            addr_map.insert(std::map<std::string, int>::value_type(base[i], j));
             continue;
         }
         auto div = strings::spilt(base[i]);
-        auto op = div[0];
-        for (auto &iter : ins_list) {
-            op = iter->relocate(op);
-        }
+        auto adb9 = lbuf + j++;
+        write_instrument::write_op_type(adb9, inf->relocate(div[0]).first);
         if (div.size() == 1) {
-            base[i] = op;
             continue;
         }
-        auto ins = strings::spilt_reg(div[1]);
-        std::string c3d4 = " ";
-        for (auto dt:ins) {
-            for (auto &iter : reg_list) {
-                if (iter->match(dt[0])) {
-                    dt = iter->relocate(dt);
-                }
-            }
-            c3d4.append(dt + ",");
+
+        auto reg = strings::spilt_reg(div[1]);
+        auto left = reg[0];
+
+        auto dtd0 = p->do_chain(left, &addr_map);
+        write_instrument::write_p0(adb9, dtd0.first, dtd0.second);
+
+        if (reg.size() == 2) {
+            auto dtd1 = p->do_chain(reg[1], &addr_map);
+            write_instrument::write_p0(adb9, dtd1.first, dtd1.second);
         }
-        base[i] = op + c3d4.substr(0, c3d4.length() - 1);
 
     }
-    for (int i = 0; i < length; ++i) {
-        if (base[i].starts_with("7") || base[i].starts_with("8") || base[i].starts_with("6") ||
-            base[i].starts_with("2")) {
-            auto v = strings::spilt(base[i]);
-            base[i] = v[0] + " %" + std::to_string(addr_map[v[1] + ":"]);
-        }
-    }
+    len = j + 1;
+    this->b = lbuf;
+    delete[] base;
     return ip;
 }
 

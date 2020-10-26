@@ -22,5 +22,28 @@ auto OperatorBiF0 = [](unsigned long x) {
 auto OperatorBitF1 = [](unsigned long x) {
     return OperatorBitF(x, 1);
 };
+
+auto write_0_8 = [](unsigned int *o, unsigned char i) {
+    unsigned int l = i;
+    *o = (*o) | (l << 24);
+};
+
+auto write_1_8 = [](unsigned int *o, unsigned char i) {
+    unsigned int l = i;
+    *o = (*o) | (l << 16);
+};
+
+
+auto write_2_8 = [](unsigned int *o, unsigned char i) {
+    unsigned int l = i;
+    *o = (*o) | (l << 8);
+};
+
+auto write_3_8 = [](unsigned int *o, unsigned char i) {
+    unsigned int l = i;
+    *o = (*o) | (l << 0);
+};
+
+
 #endif //MACHINE_BINARY_HH
 

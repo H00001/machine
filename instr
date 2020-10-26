@@ -3,19 +3,14 @@ dtc:
     int %1,%2,%3,%4,%5
 
 @code
-fun1:
-echo frank,aime,tiantian
-ret
-
 fun22:
 push %123
 push %456
 add %1,%2
 echo $eax
-je fun22
+je #fun22
 pop
 pop
-echo word
 ret
 
 __start:
@@ -25,10 +20,9 @@ loop:
 push %123
 push %456
 echo $eax
-echo hello
 add_process $eax,%-1
-call fun1
-call fun22
+call #fun1
+call #fun22
 pop
 pop
 ret %0

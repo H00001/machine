@@ -37,13 +37,11 @@ namespace gunplan::cplusplus::machine {
 
         std::string fetch_instrument(physics_address addr);
 
-        void push_stack(data_bond val, segment_disruptor *ldt, data_bond segment, data_bond offset);
-
-        data_bond pop_stack(segment_disruptor *ldt, data_bond segment, data_bond offset);
+        void write(address_bond, data_bond data);
 
         segment_disruptor *load(std::pair<code_buffer, data_buffer> p);
 
-        static address_bond transfer(segment_disruptor *ldt, segment_selector sd, address_bond offset);
+        data_bond read(address_bond addr);
 
         virtual ~memory();
     };

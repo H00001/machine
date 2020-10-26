@@ -12,11 +12,13 @@
 #include "../util/strings.hh"
 
 class program_compile_x86 : public program_compile {
+
 private:
-    std::vector<RelocatedFilter *> empty_list{new EmptyFilter()};
-    std::vector<RelocatedFilter *> reg_list{new RegisterFilter()};
-    std::vector<RelocatedFilter *> ins_list{new InstrumentFilter()};
+    Product *p = new Product({new RegisterFilter(), new AddressFilter(), new NumberFilter()});
+    InstrumentFilter *inf = new InstrumentFilter();
     buf buf1;
+    word *b;
+    int len;
 public:
 
     program_compile_x86() = default;

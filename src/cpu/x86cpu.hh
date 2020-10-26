@@ -12,6 +12,8 @@
 #include "cpu1.hh"
 #include "../util/strings.hh"
 
+#define NUM_FLAG '%'
+#define REG_FLAG '$'
 namespace gunplan::cplusplus::machine {
     using cpu_register = unsigned int;
     using cpu_register_point = cpu_register *;
@@ -20,7 +22,6 @@ namespace gunplan::cplusplus::machine {
 
     struct oper_code {
         cpu_register_point oper_reg;
-        std::string oper_str;
         decode_register oper_reg_name;
         cpu_register oper_val{};
         operaType oper_type;
@@ -95,7 +96,6 @@ namespace gunplan::cplusplus::machine {
             if (val->size() == 1) {
                 *regHeap[3] = val->front()->oper_val + 1;
             }
-            std::cout << "pop:" << tss.rip << std::endl;
             if (tss.rip == 32767) {
                 // exit
                 return -1;
@@ -128,7 +128,7 @@ namespace gunplan::cplusplus::machine {
         opFn echoFn = [&](auto val) -> auto {
             for (auto &i:*val) {
                 if (i->oper_type == str) {
-                    std::cout << i->oper_str;
+                    std::cout << "not support";
                 } else if (i->oper_type == reg) {
                     std::cout << i->oper_val;
                 }
@@ -217,40 +217,26 @@ namespace gunplan::cplusplus::machine {
             }
             int opIndex = s.find(',');
             if (opIndex < 0) {
-                list->push_back(operAna(s, h));
+                list->push_back(value_decode(s, h));
             } else {
-                sp(s, h, list);
+                list->push_back(value_decode(strings::spilt_reg(s)[0], h));
+                list->push_back(value_decode(strings::spilt_reg(s)[1], h));
             }
             return list;
         }
 
 
-        static void sp(std::string &s, register_heap *h, std::list<oper_code *> *list) {
-            auto op = strings::spilt_reg(s);
-            list->push_back(operAna(op[0], h));
-            auto c = operAna(op[1], h);
-            int k = c->oper_str.find(',');
-            if (k > 0) {
-                sp(c->oper_str, h, list);
-            } else {
-                list->push_back(c);
-            }
-        }
-
-        static oper_code *operAna(std::string &o, register_heap *h) {
+        static oper_code *value_decode(std::string &o, register_heap *h) {
             auto *op = new oper_code;
             char flag = o.c_str()[0];
-            op->oper_str = o;
-            if (flag == '%') {
+            if (flag == NUM_FLAG) {
                 op->oper_type = num;
                 op->oper_val = std::stoi(o.substr(1, o.length()));
-            } else if (flag == '$') {
+            } else if (flag == REG_FLAG) {
                 op->oper_type = reg;
                 op->oper_reg_name = stoi((o.substr(1, o.length())));
                 op->oper_val = *(*h)[op->oper_reg_name];
                 op->oper_reg = (*h)[op->oper_reg_name];
-            } else {
-                op->oper_type = str;
             }
             return op;
         }
@@ -261,6 +247,15 @@ namespace gunplan::cplusplus::machine {
         int push_process(int pid) override;
 
         void set_resource(memory *mm) override;
+
+
+        address_bond transfer(segment_disruptor *ldt, segment_selector sd, address_bond offset);
+
+        void push_stack(data_bond val, segment_disruptor *ldt, data_bond segment, data_bond offset);
+
+        data_bond pop_stack(segment_disruptor *ldt, data_bond segment, data_bond offset);
+
+
     };
 
 }
