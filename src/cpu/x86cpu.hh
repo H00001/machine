@@ -12,26 +12,66 @@
 #include "cpu1.hh"
 #include "../util/strings.hh"
 
-#define NUM_FLAG '%'
-#define REG_FLAG '$'
+#define NUM_FLAG_0 0b10
+#define REG_FLAG_0 0b00
+#define NUM_FLAG_1 0b01
+#define REG_FLAG_1 0b00
 namespace gunplan::cplusplus::machine {
     using cpu_register = unsigned int;
     using cpu_register_point = cpu_register *;
-    using decode_register = unsigned short;
+    using decode_register = unsigned char;
+    using op_bond = unsigned char;
 #define instrument_length  sizeof(cpu_register)
 
     struct oper_code {
         cpu_register_point oper_reg;
-        decode_register oper_reg_name;
         cpu_register oper_val{};
         operaType oper_type;
     };
 
-
-
-    using opFn = std::function<int(std::list<oper_code *> *)>;
+    using opFn = std::function<int(std::list<oper_code> *)>;
     using register_heap = std::map<decode_register, cpu_register *>;
-    using operatorMap = std::map<int, opFn>;
+    using operatorMap = std::map<op_bond, opFn>;
+
+    struct decode_result {
+        op_bond cmd;
+        int op_size;
+        std::list<oper_code> *oplist;
+    };
+
+    class DE {
+    public:
+        static decode_result decode(data_bond pc, register_heap *h) {
+            decode_result dt{(op_bond) (pc >> 24u), (pc & (0b0100u)) == 0 ? 0 : (pc & (0b1000u)) == 0 ? 1 : 2,
+                             new std::list<oper_code>()};
+            if (dt.op_size == 0) {
+                return dt;
+            }
+            oper_code op;
+            op.oper_val = (pc >> 16u) & 0xffu;
+            if ((pc & NUM_FLAG_0) != 0) {
+                op.oper_type = num;
+            } else {
+                op.oper_type = reg;
+                op.oper_reg = (*h)[op.oper_val];
+                op.oper_val = *(*h)[op.oper_val];
+            }
+            dt.oplist->push_back(op);
+            if (dt.op_size > 1) {
+                op.oper_val = (pc >> 8u) & 0xffu;
+                if ((pc & NUM_FLAG_1) != 0) {
+                    op.oper_type = num;
+                } else {
+                    op.oper_type = reg;
+                    op.oper_reg = (*h)[op.oper_val];
+                    op.oper_val = *(*h)[op.oper_val];
+                }
+                dt.oplist->push_back(op);
+            }
+            return dt;
+        }
+    };
+
 
     struct m_cpu;
 
@@ -42,7 +82,7 @@ namespace gunplan::cplusplus::machine {
         cpu_register rs0, rs1, rs2;
         cpu_register bit_flags;
         cpu_register rip;
-        std::string pc;
+        cpu_register pc;
         segment_disruptor *ldt_cache;
 #ifdef _vector_
         cpu_register t0, t1, t2, t3, t4, t5, t6, t7;
@@ -55,7 +95,8 @@ namespace gunplan::cplusplus::machine {
     class x86cpu : public cpu1<cpu_register> {
     public:
         const byte CMP_FLAG = 0;
-        const byte TRAP = 1;
+        const byte CMP_G_FLAG = 0;
+        const byte TRAP = 2;
     private:
         m_cpu tss;
         memory *mm = nullptr;
@@ -68,8 +109,9 @@ namespace gunplan::cplusplus::machine {
 
         segment_disruptor *gdt;
         cache_block cache[64]{};
+
         opFn pushFn = [&](auto val) -> int {
-            push_stack(val->front()->oper_val);
+            push_stack(val->front().oper_val);
             tss.rip++;
             return 0;
         };
@@ -77,7 +119,7 @@ namespace gunplan::cplusplus::machine {
         opFn popFn = [&](auto val) -> int {
             cpu_register c = pop_stack();
             if (val->size() == 1) {
-                *(val->front()->oper_reg) = c;
+                *(val->front().oper_reg) = c;
             }
             tss.rip++;
             return 0;
@@ -85,19 +127,17 @@ namespace gunplan::cplusplus::machine {
 
         // lambda
         opFn callFn = [&](auto val) -> int {
-            push_stack((unsigned long) tss.rip + 1);
-            tss.ebp = tss.esp;
-            tss.rip = val->front()->oper_val;
+            push_stack(tss.rip + 1);
+            tss.rip = val->front().oper_val;
             return 0;
         };
 
         opFn retFn = [&](auto val) -> int {
             tss.rip = pop_stack();
             if (val->size() == 1) {
-                *regHeap[3] = val->front()->oper_val + 1;
+                *regHeap[3] = val->front().oper_val + 1;
             }
-            if (tss.rip == 32767) {
-                // exit
+            if (tss.rip == 0) {
                 return -1;
             }
             return 0;
@@ -119,19 +159,15 @@ namespace gunplan::cplusplus::machine {
             return 0;
         };
 
-        opFn jmpFn = [&](auto val) -> auto {
-            tss.cs = val->size() == 2 ? val->front()->oper_val : tss.cs;
-            tss.rip = val->back()->oper_val;
+        opFn jmpFn = [&](auto val) -> int {
+            tss.cs = val->size() == 2 ? val->front().oper_val : tss.cs;
+            tss.rip = val->back().oper_val;
             return 0;
         };
 
         opFn echoFn = [&](auto val) -> auto {
             for (auto &i:*val) {
-                if (i->oper_type == str) {
-                    std::cout << "not support";
-                } else if (i->oper_type == reg) {
-                    std::cout << i->oper_val;
-                }
+                std::cout << i.oper_val;
             }
             std::cout << std::endl;
             tss.rip++;
@@ -139,47 +175,69 @@ namespace gunplan::cplusplus::machine {
         };
 
         opFn movFn = [&](auto val) -> auto {
-            if (val->back()->oper_type == reg) {
-                *(val->back()->oper_reg) = val->front()->oper_val;
+            if (val->back().oper_type == reg) {
+                *(val->back().oper_reg) = val->front().oper_val;
             }
             tss.rip++;
             return 0;
         };
 
         opFn addFn = [&](auto val) -> int {
-            cpu_register l = val->front()->oper_val;
-            cpu_register r = val->back()->oper_val;
+            cpu_register l = val->front().oper_val;
+            cpu_register r = val->back().oper_val;
             tss.eax = r + l;
             tss.rip++;
             return 0;
         };
 
         opFn exit = [&](const auto val) -> int {
-            return val->front()->oper_val;
+            return val->front().oper_val;
         };
-        opFn cmpFn = [&](const std::list<oper_code *> *val) -> int {
-            OperatorBitG(tss.bit_flags, CMP_FLAG, val->front()->oper_val == val->back()->oper_val);
+        opFn cmpFn = [&](const std::list<oper_code> *val) -> int {
+            OperatorBitG(tss.bit_flags, CMP_FLAG, val->front().oper_val == val->back().oper_val);
+            OperatorBitG(tss.bit_flags, CMP_G_FLAG, val->front().oper_val > val->back().oper_val);
             return 0;
         };
 
-        opFn enterFn = [&](const std::list<oper_code *> *val) -> int {
+        opFn enterFn = [&](const std::list<oper_code> *val) -> int {
             push_stack(tss.ebp);
             tss.ebp = tss.esp;
             tss.rip++;
             return 0;
         };
-        opFn leaveFn = [&](const std::list<oper_code *> *val) -> int {
+        opFn leaveFn = [&](const std::list<oper_code> *val) -> int {
             tss.esp = tss.ebp;
             tss.ebp = pop_stack();
             tss.rip++;
             return 0;
         };
 
-        opFn empFN = [&](const std::list<oper_code *> *val) -> int {
+        opFn empFN = [&](const std::list<oper_code> *val) -> int {
+            tss.rip++;
+            return -1;
+        };
+
+        opFn subFn = [&](const std::list<oper_code> *val) -> int {
+            tss.ebx = val->front().oper_val - val->back().oper_val;
             tss.rip++;
             return 0;
         };
 
+        opFn jlFn = [&](const auto val) -> int {
+            if (!OperatorBiF0(CMP_FLAG) && !OperatorBiF0(CMP_G_FLAG)) {
+                return jmpFn(val);
+            }
+            tss.rip++;
+            return 0;
+        };
+
+        opFn jgFn = [&](const auto val) -> int {
+            if (!OperatorBiF0(CMP_FLAG) && OperatorBiF0(CMP_G_FLAG)) {
+                return jmpFn(val);
+            }
+            tss.rip++;
+            return 0;
+        };
 
         operatorMap operMap = {{0x0,  empFN},
                                {0xb,  pushFn},
@@ -194,7 +252,10 @@ namespace gunplan::cplusplus::machine {
                                {0x8,  jne},
                                {0x9,  exit},
                                {0xa,  cmpFn},
-                               {0xb,  enterFn},
+                               {0x13, enterFn},
+                               {0x10, subFn},
+                               {0x11, jlFn},
+                               {0x12, jgFn},
                                {0xc,  leaveFn}
         };
     public:
@@ -208,48 +269,15 @@ namespace gunplan::cplusplus::machine {
 
         cpu_register pop_stack() override;
 
-        int decode(std::string basicString);
+        decode_result decode(data_bond pc);
 
-        static std::list<oper_code *> *decode0(std::string &s, register_heap *h) {
-            auto *list = new std::list<oper_code *>;
-            if (strings::trim(s).empty()) {
-                return list;
-            }
-            int opIndex = s.find(',');
-            if (opIndex < 0) {
-                list->push_back(value_decode(s, h));
-            } else {
-                list->push_back(value_decode(strings::spilt_reg(s)[0], h));
-                list->push_back(value_decode(strings::spilt_reg(s)[1], h));
-            }
-            return list;
-        }
-
-
-        static oper_code *value_decode(std::string &o, register_heap *h) {
-            auto *op = new oper_code;
-            char flag = o.c_str()[0];
-            if (flag == NUM_FLAG) {
-                op->oper_type = num;
-                op->oper_val = std::stoi(o.substr(1, o.length()));
-            } else if (flag == REG_FLAG) {
-                op->oper_type = reg;
-                op->oper_reg_name = stoi((o.substr(1, o.length())));
-                op->oper_val = *(*h)[op->oper_reg_name];
-                op->oper_reg = (*h)[op->oper_reg_name];
-            }
-            return op;
-        }
-
-
-        int execute();
+        int execute(decode_result d);
 
         int push_process(int pid) override;
 
+        int boot();
+
         void set_resource(memory *mm) override;
-
-
-        address_bond transfer(segment_disruptor *ldt, segment_selector sd, address_bond offset);
 
         void push_stack(data_bond val, segment_disruptor *ldt, data_bond segment, data_bond offset);
 

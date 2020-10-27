@@ -30,18 +30,23 @@ public:
 };
 
 class InstrumentFilter {
-    compile_code instrument_table = {{"push", 0xb},
-                                     {"pop", 0x1},
-                                     {"call", 0x2},
-                                     {"ret", 0x3},
-                                     {"mov", 0x4},
-                                     {"echo", 0x77},
-                                     {"add_process", 0x5},
-                                     {"jmp", 0x6},
-                                     {"je", 0x7},
-                                     {"jne", 0x8},
-                                     {"exit", 0x9},
-                                     {"cmp", 0xa},
+    compile_code instrument_table = {{"push",  0xb},
+                                     {"pop",   0x1},
+                                     {"call",  0x2},
+                                     {"ret",   0x3},
+                                     {"mov",   0x4},
+                                     {"echo",  0x77},
+                                     {"add",   0x5},
+                                     {"jmp",   0x6},
+                                     {"je",    0x7},
+                                     {"jne",   0x8},
+                                     {"exit",  0x9},
+                                     {"cmp",   0xa},
+                                     {"sub",   0x10},
+                                     {"jl",    0x11},
+                                     {"jg",    0x12},
+                                     {"leave", 0xc},
+                                     {"enter", 0x13},
     };
 public:
     bool match(char v) {
@@ -63,7 +68,7 @@ public:
     }
 
     decode_result relocate(std::string reg, address_map *mp) override {
-        return decode_result(reg_replace[reg.substr(1, reg.length())], false);
+        return decode_result(reg_replace[reg], false);
     }
 };
 

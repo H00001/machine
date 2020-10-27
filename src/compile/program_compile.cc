@@ -37,7 +37,7 @@ ret program_compile_x86::compile_load(std::string file_name) {
 void program_compile_x86::rewrite_to_file(std::string file_name) {
     std::ofstream os(file_name);
     for (int i = 0; i < len; ++i) {
-        os << this->b[i] << std::endl;
+        os << this->b[i] << "\t\t\t\t#" << (*debug_map)[i] << std::endl;
     }
     os.close();
 }
@@ -46,6 +46,7 @@ void program_compile_x86::rewrite_to_file(std::string file_name) {
 unsigned int program_compile_x86::compile_code_segment(std::string *base, int length, word *lbuf, int &ddlen) {
     unsigned int ip = 0;
     address_map addr_map;
+    debug_map = new std::map<int, std::string>();
     int j = 0;
     for (int i = 0; i < length; i++) {
         std::string s = strings::trim(base[i]);
@@ -54,13 +55,14 @@ unsigned int program_compile_x86::compile_code_segment(std::string *base, int le
         }
         if (base[i].ends_with(":")) {
             ip = s.starts_with("__start:") && ip == 0 ? j : ip;
-            addr_map.insert(std::map<std::string, int>::value_type(base[i], j));
+            addr_map[base[i]] = j;
             continue;
         }
         auto div = strings::spilt(base[i]);
         auto adb9 = lbuf + j++;
         write_instrument::write_op_type(adb9, inf->relocate(div[0]).first);
         if (div.size() == 1) {
+            (*debug_map)[j - 1] = base[i];
             continue;
         }
 
@@ -72,8 +74,10 @@ unsigned int program_compile_x86::compile_code_segment(std::string *base, int le
 
         if (reg.size() == 2) {
             auto dtd1 = p->do_chain(reg[1], &addr_map);
-            write_instrument::write_p0(adb9, dtd1.first, dtd1.second);
+            write_instrument::write_p1(adb9, dtd1.first, dtd1.second);
         }
+
+        (*debug_map)[j - 1] = base[i];
 
     }
     ddlen = j + 1;
@@ -81,4 +85,6 @@ unsigned int program_compile_x86::compile_code_segment(std::string *base, int le
     return ip;
 }
 
-program_compile_x86::~program_compile_x86() = default;;
+program_compile_x86::~program_compile_x86() {
+    delete[]b;
+}

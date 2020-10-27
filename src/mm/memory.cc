@@ -22,7 +22,7 @@ namespace gunplan::cplusplus::machine {
         if (bit < 0) {
             return nullptr;
         }
-        auto base = hd_code_mem + (bit << 20);
+        auto base = hd_code_mem + (bit << 20u);
         for (int i = 0; i < p.first.length; ++i) {
             base[i] = p.first.b[i];
         }

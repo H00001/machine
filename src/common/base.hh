@@ -28,7 +28,7 @@ namespace gunplan::cplusplus::machine {
 
 
     enum operaType {
-        num, reg, str
+        num, reg
     };
 
 
