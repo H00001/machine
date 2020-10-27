@@ -15,16 +15,15 @@ ret program_compile_x86::compile_load(std::string file_name) {
     int ldata = 0;
     int lcode = 0;
     while (getline(in, line)) {
+        line = strings::trim(line);
         if (line == "@data") {
             pos = 0;
         } else if (line == "@code") {
             pos = 1;
-        } else if (pos == 0) {
-            d_buff[ldata] = line;
-            ldata++;
-        } else if (pos == 1) {
-            hd_code_mem[lcode] = line;
-            lcode++;
+        } else if (pos == 0 && !line.empty()) {
+            d_buff[ldata++] = line;
+        } else if (pos == 1 && !line.empty()) {
+            hd_code_mem[lcode++] = line;
         }
     }
     int ddlen;
@@ -38,6 +37,11 @@ void program_compile_x86::rewrite_to_file(std::string file_name) {
     std::ofstream os(file_name);
     for (int i = 0; i < len; ++i) {
         os << this->b[i] << "\t\t\t\t#" << (*debug_map)[i] << std::endl;
+    }
+    os.close();
+    std::ofstream os1(file_name + "~");
+    for (int i = 0; i < data_raw_len / 2; ++i) {
+        os1 << this->da0[i] << std::endl;
     }
     os.close();
 }

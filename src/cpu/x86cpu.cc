@@ -2,7 +2,6 @@
 
 #include "x86cpu.hh"
 #include "../proc/process.hh"
-#include "x86mmu.hh"
 
 
 namespace gunplan::cplusplus::machine {
