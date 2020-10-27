@@ -14,7 +14,7 @@ namespace gunplan::cplusplus::machine {
     public:
         virtual ~cpu1() = default;
 
-        virtual void push_stack(unsigned long val) = 0;
+        virtual void push_stack(type val) = 0;
 
         virtual type pop_stack() = 0;
 

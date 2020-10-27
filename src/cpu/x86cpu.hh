@@ -11,55 +11,26 @@
 #include "../util/binary.hh"
 #include "cpu1.hh"
 #include "../util/strings.hh"
+#include "x86mmu.hh"
+#include "x86_instrument.hh"
 
 #define NUM_FLAG_0 0b10
 #define REG_FLAG_0 0b00
 #define NUM_FLAG_1 0b01
 #define REG_FLAG_1 0b00
 namespace gunplan::cplusplus::machine {
-    using cpu_register = unsigned int;
-    using cpu_register_point = cpu_register *;
-    using decode_register = unsigned char;
-    using op_bond = unsigned char;
-#define instrument_length  sizeof(cpu_register)
-
-    struct oper_code {
-        cpu_register_point oper_reg;
-        cpu_register oper_val{};
-        operaType oper_type;
-    };
-
-    using opFn = std::function<int(std::list<oper_code> *)>;
-    using register_heap = std::map<decode_register, cpu_register *>;
-    using operatorMap = std::map<op_bond, opFn>;
-
-    struct decode_result {
-        op_bond cmd;
-        int op_size;
-        std::list<oper_code> *oplist;
-    };
-
-    class DE {
-    public:
-        static decode_result decode(data_bond pc, register_heap *h) {
-            decode_result dt{(op_bond) (pc >> 24u), (pc & (0b0100u)) == 0 ? 0 : (pc & (0b1000u)) == 0 ? 1 : 2,
-                             new std::list<oper_code>()};
-            if (dt.op_size == 0) {
-                return dt;
-            }
-            oper_code op;
-            op.oper_val = (pc >> 16u) & 0xffu;
-            if ((pc & NUM_FLAG_0) != 0) {
-                op.oper_type = num;
-            } else {
-                op.oper_type = reg;
-                op.oper_reg = (*h)[op.oper_val];
-                op.oper_val = *(*h)[op.oper_val];
-            }
-            dt.oplist->push_back(op);
-            if (dt.op_size > 1) {
-                op.oper_val = (pc >> 8u) & 0xffu;
-                if ((pc & NUM_FLAG_1) != 0) {
+    class x86cpu : public cpu1<data_bond> {
+        class DE {
+        public:
+            static decode_result decode(data_bond pc, register_heap *h) {
+                decode_result dt{(op_bond) (pc >> 24u), (pc & (0b0100u)) == 0 ? 0 : (pc & (0b1000u)) == 0 ? 1 : 2,
+                                 new std::list<oper_code>()};
+                if (dt.op_size == 0) {
+                    return dt;
+                }
+                oper_code op;
+                op.oper_val = (pc >> 16u) & 0xffu;
+                if ((pc & NUM_FLAG_0) != 0) {
                     op.oper_type = num;
                 } else {
                     op.oper_type = reg;
@@ -67,48 +38,25 @@ namespace gunplan::cplusplus::machine {
                     op.oper_val = *(*h)[op.oper_val];
                 }
                 dt.oplist->push_back(op);
+                if (dt.op_size > 1) {
+                    op.oper_val = (pc >> 8u) & 0xffu;
+                    if ((pc & NUM_FLAG_1) != 0) {
+                        op.oper_type = num;
+                    } else {
+                        op.oper_type = reg;
+                        op.oper_reg = (*h)[op.oper_val];
+                        op.oper_val = *(*h)[op.oper_val];
+                    }
+                    dt.oplist->push_back(op);
+                }
+                return dt;
             }
-            return dt;
-        }
-    };
+        };
 
-
-    struct m_cpu;
-
-    struct m_cpu {
-        cpu_register eax, ebx, ecx, edx;
-        cpu_register cs, ss, ds, es, fs, hs;
-        cpu_register esi, edi, esp, ebp;
-        cpu_register rs0, rs1, rs2;
-        cpu_register bit_flags;
-        cpu_register rip;
-        cpu_register pc;
-        segment_disruptor *ldt_cache;
-#ifdef _vector_
-        cpu_register t0, t1, t2, t3, t4, t5, t6, t7;
-        cpu_register r0, r1, r2, r3, r4, r5, r6, r7;
-#endif
-
-    };
-
-
-    class x86cpu : public cpu1<cpu_register> {
-    public:
-        const byte CMP_FLAG = 0;
-        const byte CMP_G_FLAG = 0;
-        const byte TRAP = 2;
     private:
+        x86mmu mmu;
         m_cpu tss;
         memory *mm = nullptr;
-        register_heap regHeap = {{1, &tss.eax},
-                                 {2, &tss.ebx},
-                                 {3, &tss.ecx},
-                                 {4, &tss.edx},
-                                 {5, &tss.esi},
-                                 {6, &tss.edi}};
-
-        segment_disruptor *gdt;
-        cache_block cache[64]{};
 
         opFn pushFn = [&](auto val) -> int {
             push_stack(val->front().oper_val);
@@ -125,7 +73,7 @@ namespace gunplan::cplusplus::machine {
             return 0;
         };
 
-        // lambda
+// lambda
         opFn callFn = [&](auto val) -> int {
             push_stack(tss.rip + 1);
             tss.rip = val->front().oper_val;
@@ -238,6 +186,22 @@ namespace gunplan::cplusplus::machine {
             tss.rip++;
             return 0;
         };
+    public:
+        const byte CMP_FLAG = 0;
+        const byte CMP_G_FLAG = 0;
+        const byte TRAP = 2;
+    private:
+
+        register_heap regHeap = {{1, &tss.eax},
+                                 {2, &tss.ebx},
+                                 {3, &tss.ecx},
+                                 {4, &tss.edx},
+                                 {5, &tss.esi},
+                                 {6, &tss.edi}};
+
+        segment_disruptor *gdt;
+        cache_block cache[64]{};
+
 
         operatorMap operMap = {{0x0,  empFN},
                                {0xb,  pushFn},
@@ -265,7 +229,7 @@ namespace gunplan::cplusplus::machine {
 
         ~x86cpu() override;
 
-        void push_stack(unsigned long val) override;
+        void push_stack(data_bond val) override;
 
         cpu_register pop_stack() override;
 
@@ -279,9 +243,9 @@ namespace gunplan::cplusplus::machine {
 
         void set_resource(memory *mm) override;
 
-        void push_stack(data_bond val, segment_disruptor *ldt, data_bond segment, data_bond offset);
+        void push_stack(data_bond val, data_bond segment, data_bond offset);
 
-        data_bond pop_stack(segment_disruptor *ldt, data_bond segment, data_bond offset);
+        data_bond pop_stack(data_bond segment, data_bond offset);
 
 
     };

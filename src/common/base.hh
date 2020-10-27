@@ -26,10 +26,4 @@ namespace gunplan::cplusplus::machine {
         byte type;
     };
 
-
-    enum operaType {
-        num, reg
-    };
-
-
 }

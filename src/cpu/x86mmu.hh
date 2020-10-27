@@ -9,8 +9,14 @@
 
 namespace gunplan::cplusplus::machine {
     class x86mmu {
+    private:
+        segment_disruptor *ldt;
     public:
-        static address_bond transfer(segment_disruptor *ldt, segment_selector sd, address_bond offset);
+        x86mmu() = default;
+
+        void set_ldt(segment_disruptor *ldt);
+
+        address_bond transfer(segment_selector sd, address_bond offset);
     };
 }
 
