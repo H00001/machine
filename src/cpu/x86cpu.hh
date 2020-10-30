@@ -10,8 +10,8 @@
 #include "../mm/memory.hh"
 #include "../util/binary.hh"
 #include "cpu1.hh"
-#include "../util/strings.hh"
 #include "x86mmu.hh"
+#include "../proc/process.hh"
 #include "x86_instrument.hh"
 
 #define NUM_FLAG_0 0b10
@@ -21,7 +21,22 @@
 #define ADDR_FLAG_0 0b1000000
 #define ADDR_FLAG_1 0b0100000
 namespace gunplan::cplusplus::machine {
+#define WRITE_WB(x, y)         nullwb.w.first = true;\
+    nullwb.w.second.first = (x);\
+    nullwb.w.second.second = (y);                    \
+    return nullwb;
+#define SET_NEXT(x)             nullwb.next_add = false;\
+    nullwb.next = (x);                                  \
+    return nullwb;
+#define WRITE_WB_SET_NEXT(x, y, z)   nullwb.w.first = true;\
+    nullwb.w.second.first = (x);\
+    nullwb.w.second.second = (y);                        \
+    nullwb.next_add = false;                               \
+    nullwb.next = (z);                                  \
+    return nullwb;
+
     class x86cpu : public cpu1<data_bond> {
+
         class DE {
         public:
             static decode_result decode(data_bond pc, register_heap *h) {
@@ -62,60 +77,51 @@ namespace gunplan::cplusplus::machine {
         x86mmu mmu;
         m_cpu tss;
         memory *mm = nullptr;
+        ex_ret nullwb;
 
-        opFn pushFn = [&](auto val) -> int {
+        opFn pushFn = [&](auto val) -> auto {
             push_stack(val->front().oper_val);
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
-        opFn popFn = [&](auto val) -> int {
+        opFn popFn = [&](auto val) -> auto {
             cpu_register c = pop_stack();
             if (val->size() == 1) {
-                *(val->front().oper_reg) = c;
+                WRITE_WB(val->front().oper_reg, c);
             }
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
 // lambda
-        opFn callFn = [&](auto val) -> int {
+        opFn callFn = [&](auto val) -> auto {
             push_stack(tss.rip + 1);
-            tss.rip = val->front().oper_val;
-            return 0;
+            return jmpFn(val);
         };
 
-        opFn retFn = [&](auto val) -> int {
-            tss.rip = pop_stack();
-            if (val->size() == 1) {
-                *regHeap[3] = val->front().oper_val + 1;
+        opFn retFn = [&](auto val) -> auto {
+            int k = pop_stack();
+            if (val->size() == 0) {
+                SET_NEXT(k);
             }
-            if (tss.rip == 0) {
-                return -1;
-            }
-            return 0;
+            WRITE_WB_SET_NEXT(&tss.ecx, val->front().oper_val + 1, k);
         };
 
-        opFn je = [&](auto val) -> int {
+        opFn je = [&](auto val) -> auto {
             if (OperatorBitF(tss.bit_flags, CMP_FLAG)) {
                 return jmpFn(val);
             }
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
         opFn jne = [&](auto val) -> auto {
             if (!OperatorBitF(tss.bit_flags, CMP_FLAG)) {
                 return jmpFn(val);
             }
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
-        opFn jmpFn = [&](auto val) -> int {
-            tss.cs = val->size() == 2 ? val->front().oper_val : tss.cs;
-            tss.rip = val->back().oper_val;
-            return 0;
+        opFn jmpFn = [&](auto val) -> auto {
+            SET_NEXT(val->back().oper_val);
         };
 
         opFn echoFn = [&](auto val) -> auto {
@@ -123,73 +129,59 @@ namespace gunplan::cplusplus::machine {
                 std::cout << i.oper_val;
             }
             std::cout << std::endl;
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
         opFn movFn = [&](auto val) -> auto {
             if (val->back().oper_type == reg) {
-                *(val->back().oper_reg) = val->front().oper_val;
+                WRITE_WB(val->back().oper_reg, val->front().oper_val);
             }
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
-        opFn addFn = [&](auto val) -> int {
-            cpu_register l = val->front().oper_val;
-            cpu_register r = val->back().oper_val;
-            tss.eax = r + l;
-            tss.rip++;
-            return 0;
+        opFn addFn = [&](auto val) -> auto {
+            WRITE_WB(&tss.eax, val->front().oper_val + val->back().oper_val);
         };
 
-        opFn exit = [&](const auto val) -> int {
-            return val->front().oper_val;
+        opFn exit = [&](const auto val) -> auto {
+            return nullwb;
         };
-        opFn cmpFn = [&](const std::list<oper_code> *val) -> int {
+
+        opFn cmpFn = [&](const std::list<oper_code> *val) -> auto {
             OperatorBitG(tss.bit_flags, CMP_FLAG, val->front().oper_val == val->back().oper_val);
             OperatorBitG(tss.bit_flags, CMP_G_FLAG, val->front().oper_val > val->back().oper_val);
-            return 0;
+            return nullwb;
         };
 
-        opFn enterFn = [&](const std::list<oper_code> *val) -> int {
+        opFn enterFn = [&](const std::list<oper_code> *val) -> auto {
             push_stack(tss.ebp);
             tss.ebp = tss.esp;
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
-        opFn leaveFn = [&](const std::list<oper_code> *val) -> int {
+        opFn leaveFn = [&](const std::list<oper_code> *val) -> auto {
             tss.esp = tss.ebp;
             tss.ebp = pop_stack();
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
-        opFn empFN = [&](const std::list<oper_code> *val) -> int {
-            tss.rip++;
-            return -1;
+        opFn empFN = [&](const std::list<oper_code> *val) -> auto { return nullwb; };
+
+        opFn subFn = [&](auto val) -> auto {
+            WRITE_WB(&tss.ebx, val->front().oper_val - val->back().oper_val);
         };
 
-        opFn subFn = [&](const std::list<oper_code> *val) -> int {
-            tss.ebx = val->front().oper_val - val->back().oper_val;
-            tss.rip++;
-            return 0;
-        };
-
-        opFn jlFn = [&](const auto val) -> int {
+        opFn jlFn = [&](const auto val) -> auto {
             if (!OperatorBiF0(CMP_FLAG) && !OperatorBiF0(CMP_G_FLAG)) {
                 return jmpFn(val);
             }
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
 
-        opFn jgFn = [&](const auto val) -> int {
+        opFn jgFn = [&](const auto val) -> auto {
             if (!OperatorBiF0(CMP_FLAG) && OperatorBiF0(CMP_G_FLAG)) {
                 return jmpFn(val);
             }
-            tss.rip++;
-            return 0;
+            return nullwb;
         };
     public:
         const byte CMP_FLAG = 0;
@@ -228,31 +220,42 @@ namespace gunplan::cplusplus::machine {
                                {0xc,  leaveFn}
         };
     public:
+
         x86cpu() = default;
 
         x86cpu(memory *mm);
 
-        ~x86cpu() override;
+        ~x86cpu()
 
-        void push_stack(data_bond val) override;
+        override;
 
-        cpu_register pop_stack() override;
+        void push_stack(data_bond val)
+
+        override;
+
+        cpu_register pop_stack()
+
+        override;
 
         decode_result decode(data_bond pc);
 
-        int execute(decode_result d);
+        ex_ret execute(decode_result d);
 
-        int push_process(int pid) override;
+        int push_process(int pid)
 
-        int boot();
+        override;
 
-        void set_resource(memory *mm) override;
+        int boot(int k);
+
+        void set_resource(memory *mm)
+        override;
 
         void push_stack(data_bond val, cpu_register_segment segment, data_bond offset);
 
         data_bond pop_stack(cpu_register_segment segment, data_bond offset);
 
 
+        int write_back(wb_data pair);
     };
 
 }

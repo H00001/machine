@@ -21,12 +21,22 @@ namespace gunplan::cplusplus::machine {
     using decode_register = unsigned char;
     using op_bond = unsigned char;
 
+    using wb = std::pair<cpu_register *, data_bond>;
+    using wb_data = std::pair<bool, wb>;
+
+
+    struct ex_ret {
+        bool next_add = true;
+        address_bond next = 0;
+        wb_data w = wb_data(false, wb(nullptr, 0));
+    };
+
     struct oper_code {
         cpu_register_point oper_reg{0};
         cpu_register oper_val{0};
         decode_register oper_type;
-
     };
+
 
     struct m_cpu {
         cpu_register eax{0}, ebx{0}, ecx{0}, edx{0};
@@ -43,7 +53,7 @@ namespace gunplan::cplusplus::machine {
 
     };
 
-    using opFn = std::function<int(std::list<oper_code> *)>;
+    using opFn = std::function<ex_ret(std::list<oper_code> *)>;
 
     using register_heap = std::map<decode_register, cpu_register *>;
     using operatorMap = std::map<op_bond, opFn>;
@@ -52,6 +62,10 @@ namespace gunplan::cplusplus::machine {
         op_bond cmd;
         int op_size;
         std::list<oper_code> *oplist;
+    };
+
+    struct segment_selector {
+        cpu_register_segment key;
     };
 }
 #endif //MACHINE_X86_INSTRUMENT_HH

@@ -1,36 +1,40 @@
 
 
 #include "x86cpu.hh"
-#include "../proc/process.hh"
-
 
 namespace gunplan::cplusplus::machine {
     int x86cpu::push_process(int pid) {
         task_struct *next = process::get_process(pid);
         memmove(&tss, next, sizeof(m_cpu));
         mmu.set_ldt(next->ldt);
-        return this->boot();
+        return this->boot(next->ldt[0].len);
     }
 
-    int x86cpu::boot() {
+    int x86cpu::boot(int k) {
+        push_stack(k);
         while (true) {
-            auto i = mm->fetch_instrument(mmu.transfer(segment_selector{tss.cs}, tss.rip));
-            tss.pc = i;
-            auto d = decode(tss.pc);
-            if (execute(d) < 0) {
-                break;
+            // FI
+            tss.pc = mm->fetch_instrument(mmu.transfer(segment_selector{tss.cs}, tss.rip));
+            if (tss.pc == 0) {
+                return tss.ecx;
             }
+            // DE
+            auto data_to_execute = decode(tss.pc);
+            // EX
+            auto data_to_write = execute(data_to_execute);
+            // WB
+            tss.rip = data_to_write.next_add ? tss.rip + 1 : data_to_write.next;
+            auto dr = write_back(data_to_write.w);
+
         }
-        return 0;
     }
 
-    int x86cpu::execute(decode_result d) {
-        push_stack(0);
+    ex_ret x86cpu::execute(decode_result d) {
         if (operMap.count(d.cmd) > 0) {
             auto fn = operMap[d.cmd];
             return fn(d.oplist);
         }
-        throw -3;
+        throw nullwb;
     }
 
     // DE
@@ -71,6 +75,13 @@ namespace gunplan::cplusplus::machine {
 
     data_bond x86cpu::pop_stack(cpu_register_segment segment, data_bond offset) {
         return mm->read(mmu.transfer(segment_selector{segment}, offset - 1));
+    }
+
+    int x86cpu::write_back(wb_data data) {
+        if (!data.first) {
+            return 0;
+        }
+        *data.second.first = data.second.second;
     }
 
 

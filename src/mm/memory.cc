@@ -42,6 +42,7 @@ namespace gunplan::cplusplus::machine {
         return this->hd_mem[addr];
     }
 
+    // FI
     data_bond memory::fetch_instrument(physics_address addr) {
         return hd_code_mem[addr];
     }

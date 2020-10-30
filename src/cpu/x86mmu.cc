@@ -8,8 +8,8 @@
 namespace gunplan::cplusplus::machine {
 
     address_bond x86mmu::transfer(segment_selector sd, address_bond offset) {
-        auto sdt = OperatorBitF(sd.key, 2) ? ldt : gdt;
-        if (offset > ldt[sd.key].len) {
+        auto sdt = IS_LDT(sd.key) ? ldt : gdt;
+        if (offset > ldt[sd.key >> 3u].len) {
             throw offset;
         }
         return (sdt[sd.key >> 3u].start << 20u) + offset;

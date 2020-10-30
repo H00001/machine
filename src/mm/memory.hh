@@ -20,9 +20,6 @@ namespace gunplan::cplusplus::machine {
     using address_bond = unsigned int;
     using physics_address = address_bond;
 
-    struct segment_selector {
-        unsigned short key;
-    };
 
     class memory {
     private:

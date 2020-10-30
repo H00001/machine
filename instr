@@ -8,7 +8,6 @@ __start:
     enter
     mov %10,$eax
     add $eax,%1
-    mov $ebx,[$eax]
     echo $eax
     leave
     ret %0

@@ -6,8 +6,11 @@
 #define MACHINE_X86MMU_HH
 
 #include "../mm/memory.hh"
+#include "x86_instrument.hh"
 
 namespace gunplan::cplusplus::machine {
+#define IS_LDT(x) OperatorBitF(x, 2)
+
     class x86mmu {
     private:
         segment_disruptor *ldt;
