@@ -21,7 +21,7 @@ namespace gunplan::cplusplus::machine {
     using physics_address = address_bond;
 
     struct segment_selector {
-        unsigned long key;
+        unsigned short key;
     };
 
     class memory {

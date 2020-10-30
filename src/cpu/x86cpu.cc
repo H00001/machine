@@ -65,11 +65,11 @@ namespace gunplan::cplusplus::machine {
     }
 
 
-    void x86cpu::push_stack(data_bond val, data_bond segment, data_bond offset) {
+    void x86cpu::push_stack(data_bond val, cpu_register_segment segment, data_bond offset) {
         mm->write(mmu.transfer(segment_selector{segment}, offset), val);
     }
 
-    data_bond x86cpu::pop_stack(data_bond segment, data_bond offset) {
+    data_bond x86cpu::pop_stack(cpu_register_segment segment, data_bond offset) {
         return mm->read(mmu.transfer(segment_selector{segment}, offset - 1));
     }
 

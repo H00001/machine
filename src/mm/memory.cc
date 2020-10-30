@@ -31,7 +31,6 @@ namespace gunplan::cplusplus::machine {
         t[1] = segment_disruptor{bit, p.second.length, 0};
         t[2] = segment_disruptor{0, 1024, 0};
         return t;
-
     }
 
 

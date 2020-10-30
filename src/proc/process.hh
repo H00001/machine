@@ -10,20 +10,25 @@
 #include "../mm/memory.hh"
 #include "../cpu/x86cpu.hh"
 
-
+#define segment_selector_b short int
 namespace gunplan::cplusplus::machine {
+
     using buf = std::tuple<segment_buffer, segment_buffer, unsigned int>;
     struct task_struct {
         m_cpu m;
         segment_disruptor *ldt{};
+        int pid;
     };
 
 
     class process {
-        const int seg_code_selector = 0;
-        const int seg_data_selector = 1;
-        const int seg_stack_selector = 2;
-        const int seg_ex_selector = 3;
+        /**
+         * segment selector
+        **/
+        const segment_selector_b seg_code_selector = 0b100u;
+        const segment_selector_b seg_data_selector = 0b1100u;
+        const segment_selector_b seg_stack_selector = 0b10100u;
+        const segment_selector_b seg_ex_selector = 0b11100;
 
     private:
         buf *task;

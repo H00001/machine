@@ -18,6 +18,8 @@
 #define REG_FLAG_0 0b00
 #define NUM_FLAG_1 0b01
 #define REG_FLAG_1 0b00
+#define ADDR_FLAG_0 0b1000000
+#define ADDR_FLAG_1 0b0100000
 namespace gunplan::cplusplus::machine {
     class x86cpu : public cpu1<data_bond> {
         class DE {
@@ -30,6 +32,9 @@ namespace gunplan::cplusplus::machine {
                 }
                 oper_code op;
                 op.oper_val = (pc >> 16u) & 0xffu;
+                if ((pc & ADDR_FLAG_0) != 0) {
+                    op.oper_type |= addr;
+                }
                 if ((pc & NUM_FLAG_0) != 0) {
                     op.oper_type = num;
                 } else {
@@ -243,9 +248,9 @@ namespace gunplan::cplusplus::machine {
 
         void set_resource(memory *mm) override;
 
-        void push_stack(data_bond val, data_bond segment, data_bond offset);
+        void push_stack(data_bond val, cpu_register_segment segment, data_bond offset);
 
-        data_bond pop_stack(data_bond segment, data_bond offset);
+        data_bond pop_stack(cpu_register_segment segment, data_bond offset);
 
 
     };

@@ -1,33 +1,14 @@
 @data
 dtc:
-
-    byte 1,2,3,4,5
-ld:
+    byte 1 2 3 4 5
+sum:
     int 34
-
 @code
-fun1:
-fun22:
-push %123
-push %456
-add %1,$eax
-je #fun22
-pop
-pop
-ret
-
 __start:
     enter
-    mov %200,$eax
-    mov %2,$ebx
-    echo $eax
-loop:
-    push %123
-    push %456
+    mov %10,$eax
     add $eax,%1
-    sub $eax,%1
-    echo $ebx
-    call #fun1
-    call #fun22
+    mov $ebx,[$eax]
+    echo $eax
     leave
     ret %0

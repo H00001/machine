@@ -36,9 +36,27 @@ private:
 
     unsigned int compile_data_segment(std::string *base, int length, word *, int &) {
         da0 = new std::string[length / 2];
+        std::map<std::string, int> m = {{"int", 0}};
+        auto da1 = new unsigned char[3000];
+        auto da2 = da1;
         for (int i = 0, j = 0; i < length; i += 2) {
             auto dt = strings::trim(base[i]) + " " + strings::trim(base[i + 1]);
             da0[j++] = dt;
+            auto p = strings::spilt(base[i + 1]);
+            if (p[0] == "int") {
+                int *pi = reinterpret_cast<int *>(da2);
+                for (int i = 1; i < p.size(); i++) {
+                    *(pi++) = std::stoi(p[i]);
+                }
+                da2 = reinterpret_cast<unsigned char *>(pi);
+            }
+            if (p[0] == "byte") {
+                auto *p4 = reinterpret_cast<unsigned char *>(da2);
+                for (int i = 1; i < p.size(); i++) {
+                    *(p4++) = std::stoi(p[i]);
+                }
+                da2 = reinterpret_cast<unsigned char *>(p4);
+            }
         }
         data_raw_len = length;
         return 0;

@@ -13,7 +13,7 @@
 using word = unsigned int;
 using double_word = unsigned long;
 using op_len = unsigned char;
-using decode_result = std::pair<op_len, bool>;
+using decode_result = std::pair<op_len, std::pair<bool, bool>>;
 using offset = unsigned int;
 using address_map = std::map<std::string, offset>;
 using compile_register = std::map<std::string, int>;

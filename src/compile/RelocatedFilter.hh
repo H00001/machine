@@ -54,7 +54,8 @@ public:
     }
 
     decode_result relocate(std::string reg) {
-        return decode_result(instrument_table[reg], false);
+        return decode_result(instrument_table[reg], std::pair<bool,
+                bool>(false, false));
     }
 
 };
@@ -68,7 +69,8 @@ public:
     }
 
     decode_result relocate(std::string reg, address_map *mp) override {
-        return decode_result(reg_replace[reg], false);
+        return decode_result(reg_replace[reg], std::pair<bool,
+                bool>(false, false));
     }
 };
 
@@ -76,11 +78,13 @@ class AddressFilter : public RelocatedFilter {
 public:
 
     bool match(char v) override {
-        return v == '#';
+        return v == '[';
     }
 
-    decode_result relocate(std::string addr, address_map *mp) override {
-        return decode_result((*mp)[addr + ":"], true);
+    decode_result relocate(std::string reg, address_map *mp) override {
+        auto t = reg.substr(1, reg.length() - 2);
+        return decode_result(reg_replace[t], std::pair<bool,
+                bool>(false, true));
     }
 };
 
@@ -93,7 +97,8 @@ public:
     }
 
     decode_result relocate(std::string num, address_map *mp) override {
-        return decode_result(std::stoi(num), true);
+        return decode_result(std::stoi(num), std::pair<bool,
+                bool>(true, false));
     }
 };
 
@@ -101,8 +106,8 @@ class Product {
     std::list<RelocatedFilter *> filter_chain;
 public:
     Product(const std::initializer_list<RelocatedFilter *> &l) {
-        for (auto b = l.begin(); b != l.end(); b++) {
-            filter_chain.push_back(*b);
+        for (auto b : l) {
+            filter_chain.push_back(b);
         }
     }
 

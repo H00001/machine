@@ -15,6 +15,11 @@ auto OperatorBitF = [](unsigned long x, short p) -> bool {
     return (x & (1 << p));
 };
 
+auto OperatorBitFS = [](unsigned short x, short p) -> bool {
+    return (x & (1 << p));
+};
+
+
 auto OperatorBiF0 = [](unsigned long x) {
     return OperatorBitF(x, 0);
 };
@@ -22,6 +27,8 @@ auto OperatorBiF0 = [](unsigned long x) {
 auto OperatorBitF1 = [](unsigned long x) {
     return OperatorBitF(x, 1);
 };
+
+
 
 auto write_0_8 = [](unsigned int *o, unsigned char i) {
     unsigned int l = i;

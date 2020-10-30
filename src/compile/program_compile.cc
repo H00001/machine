@@ -74,11 +74,11 @@ unsigned int program_compile_x86::compile_code_segment(std::string *base, int le
         auto left = reg[0];
 
         auto dtd0 = p->do_chain(left, &addr_map);
-        write_instrument::write_p0(adb9, dtd0.first, dtd0.second);
+        write_instrument::write_p0(adb9, dtd0.first, dtd0.second.first, dtd0.second.second);
 
         if (reg.size() == 2) {
             auto dtd1 = p->do_chain(reg[1], &addr_map);
-            write_instrument::write_p1(adb9, dtd1.first, dtd1.second);
+            write_instrument::write_p1(adb9, dtd1.first, dtd1.second.first, dtd1.second.second);
         }
 
         (*debug_map)[j - 1] = base[i];
